@@ -1,0 +1,11 @@
+[Unit]
+Description=Osmocom Home NodeB (hNodeB)
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/osmo-hnodeb -c /etc/osmocom/osmo-hnodeb.cfg
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,4 @@
+etc/osmocom/osmo-hnodeb.cfg
+lib/systemd/system/osmo-hnodeb.service
+usr/bin/osmo-hnodeb
+usr/share/doc/osmo-hnodeb/examples/osmo-hnodeb/osmo-hnodeb.cfg usr/share/doc/osmo-hnodeb/examples

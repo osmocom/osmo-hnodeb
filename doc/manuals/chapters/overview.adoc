@@ -1,0 +1,14 @@
+OsmoHNodeB[[overview]]
+== Overview
+
+This manual should help you getting started with OsmoHNodeB. It will cover
+aspects of configuring and running the OsmoHNodeB.
+
+[[intro_overview]]
+=== About OsmoHNodeB
+
+OsmoHNodeB is the Osmocom implementation of a 3G Home NodeB. It
+implements:
+
+- An L2 Uu radio interface towards 3G UEs
+- an Iuh interface towards Home Node BG Gateway HNBGW

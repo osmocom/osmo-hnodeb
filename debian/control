@@ -1,0 +1,46 @@
+Source: osmo-hnodeb
+Section: net
+Priority: extra
+Maintainer: Osmocom team <openbsc@lists.osmocom.org>
+Build-Depends: debhelper (>=9),
+               dh-autoreconf,
+               autotools-dev,
+               autoconf,
+               automake,
+               libtool,
+               pkg-config,
+               python3-minimal,
+               libtalloc-dev,
+               libasn1c-dev,
+               libosmocore-dev (>= 1.5.0),
+               libosmo-sigtran-dev (>= 1.4.0),
+               libosmo-abis-dev (>= 1.1.0),
+               libosmo-netif-dev (>= 1.1.0),
+               osmo-gsm-manuals-dev (>= 1.1.0)
+Standards-Version: 3.9.8
+Vcs-Git: git://git.osmocom.org/osmo-hnodeb.git
+Vcs-Browser: https://git.osmocom.org/osmo-hnodeb/
+Homepage: https://projects.osmocom.org/projects/osmo-hnodeb
+
+Package: osmo-hnodeb
+Architecture: any
+Multi-Arch: foreign
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Recommends: osmo-mgw
+Description: OsmoHNodeB: Osmocom's Home NodeB for 3G mobile networks
+
+Package: osmo-hnodeb-dbg
+Section: debug
+Architecture: any
+Multi-Arch: same
+Depends: osmo-hnodeb (= ${binary:Version}), ${misc:Depends}
+Description: OsmoHNodeB: Osmocom's Home NodeB for 3G mobile networks
+
+Package: osmo-hnodeb-doc
+Architecture: all
+Section: doc
+Priority: optional
+Depends: ${misc:Depends}
+Description: ${misc:Package} PDF documentation
+ Various manuals: user manual, VTY reference manual and/or
+ protocol/interface manuals.

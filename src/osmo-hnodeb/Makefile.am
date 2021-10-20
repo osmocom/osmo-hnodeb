@@ -1,0 +1,40 @@
+AM_CPPFLAGS = \
+	$(all_includes) \
+	-I$(top_srcdir)/include \
+	-I$(top_builddir) \
+	$(NULL)
+
+AM_CFLAGS = \
+	-Wall \
+	$(LIBOSMOCORE_CFLAGS) \
+	$(LIBOSMOGSM_CFLAGS) \
+	$(LIBOSMOVTY_CFLAGS) \
+	$(LIBOSMOCTRL_CFLAGS) \
+	$(LIBOSMONETIF_CFLAGS) \
+	$(COVERAGE_CFLAGS) \
+	$(LIBOSMOABIS_CFLAGS) \
+	$(LIBOSMOSIGTRAN_CFLAGS) \
+	$(NULL)
+
+AM_LDFLAGS = \
+	$(COVERAGE_LDFLAGS) \
+	$(NULL)
+
+bin_PROGRAMS = \
+	osmo-hnodeb \
+	$(NULL)
+
+osmo_hnodeb_SOURCES = \
+	main.c \
+	$(NULL)
+
+osmo_hnodeb_LDADD = \
+	$(LIBOSMOCORE_LIBS) \
+	$(LIBOSMOGSM_LIBS) \
+	$(LIBOSMOVTY_LIBS) \
+	$(LIBOSMOCTRL_LIBS) \
+	$(LIBOSMONETIF_LIBS) \
+	$(COVERAGE_LDFLAGS) \
+	$(LIBOSMOABIS_LIBS) \
+	$(LIBOSMOSIGTRAN_LIBS) \
+	$(NULL)

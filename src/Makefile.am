@@ -1,0 +1,3 @@
+SUBDIRS = \
+	osmo-hnodeb \
+	$(NULL)
