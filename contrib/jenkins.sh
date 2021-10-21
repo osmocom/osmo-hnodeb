@@ -34,6 +34,7 @@ osmo-build-dep.sh libosmo-abis
 osmo-build-dep.sh libosmo-netif
 osmo-build-dep.sh libosmo-sccp
 osmo-build-dep.sh libasn1c
+osmo-build-dep.sh osmo-iuh
 
 # Additional configure options and depends
 CONFIG=""
@@ -51,12 +52,12 @@ set -x
 
 cd "$base"
 autoreconf --install --force
-./configure --enable-sanitize --enable-external-tests --enable-werror $CONFIG
+./configure --enable-sanitize --enable-external-tests $CONFIG
 $MAKE $PARALLEL_MAKE
 LD_LIBRARY_PATH="$inst/lib" $MAKE check \
   || cat-testlogs.sh
 LD_LIBRARY_PATH="$inst/lib" \
-  DISTCHECK_CONFIGURE_FLAGS="--enable-vty-tests --enable-external-tests --enable-werror $CONFIG" \
+  DISTCHECK_CONFIGURE_FLAGS="--enable-vty-tests --enable-external-tests $CONFIG" \
   $MAKE $PARALLEL_MAKE distcheck \
   || cat-testlogs.sh
 

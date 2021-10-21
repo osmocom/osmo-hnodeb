@@ -55,6 +55,7 @@ AC_SEARCH_LIBS([sctp_recvmsg], [sctp], [
 	AC_MSG_ERROR([sctp_recvmsg not found in searched libs])])
 LIBS=$old_LIBS
 
+PKG_CHECK_MODULES(LIBASN1C, libasn1c >= 0.9.30)
 PKG_CHECK_MODULES(LIBOSMOCORE, libosmocore >= 1.5.0)
 PKG_CHECK_MODULES(LIBOSMOVTY, libosmovty >= 1.5.0)
 PKG_CHECK_MODULES(LIBOSMOCTRL, libosmoctrl >= 1.5.0)
@@ -62,6 +63,10 @@ PKG_CHECK_MODULES(LIBOSMOGSM, libosmogsm >= 1.5.0)
 PKG_CHECK_MODULES(LIBOSMOABIS, libosmoabis >= 1.1.0)
 PKG_CHECK_MODULES(LIBOSMONETIF, libosmo-netif >= 1.1.0)
 PKG_CHECK_MODULES(LIBOSMOSIGTRAN, libosmo-sigtran >= 1.4.0)
+PKG_CHECK_MODULES(LIBOSMORUA, libosmo-rua >= 0.7.0)
+PKG_CHECK_MODULES(LIBOSMORANAP, libosmo-ranap >= 0.7.0)
+PKG_CHECK_MODULES(LIBOSMOHNBAP, libosmo-hnbap >= 0.7.0)
+
 
 dnl checks for header files
 AC_HEADER_STDC
