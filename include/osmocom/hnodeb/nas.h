@@ -17,12 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/lienses/>.
  *
  */
+
 #pragma once
 
-#include <asn1c/ANY.h>
-
 struct hnb;
-struct msgb;
-
-int hnb_rua_rx(struct hnb *hnb, struct msgb *msg);
-int hnb_tx_dt(struct hnb *hnb, struct msgb *txm);
+void hnb_nas_rx_dtap(struct hnb *hnb, void *data, int len);

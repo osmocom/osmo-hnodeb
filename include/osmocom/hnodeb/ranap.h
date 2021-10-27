@@ -19,8 +19,15 @@
  */
 #pragma once
 
+struct hnb;
 struct ranap_message_s;
 #include <osmocom/hnodeb/hnodeb.h>
 
+void hnb_rx_iu_release(struct hnb *hnb);
+void hnb_rx_paging(struct hnb *hnb, const char *imsi);
+void hnb_rx_secmode_cmd(struct hnb *hnb, long ip_alg);
+
 void hnb_rua_dt_handle_ranap(struct hnb *hnb, struct ranap_message_s *ranap_msg);
 void hnb_rua_cl_handle_ranap(struct hnb *hnb, struct ranap_message_s *ranap_msg);
+void hnb_tx_iu_release_req(struct hnb *hnb);
+struct msgb *gen_initue_lu(int is_ps, uint32_t conn_id, const char *imsi);

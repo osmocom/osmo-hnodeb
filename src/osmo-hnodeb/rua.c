@@ -24,10 +24,26 @@
 
 #include <osmocom/rua/rua_ies_defs.h>
 #include <osmocom/ranap/ranap_common_cn.h>
+#include <osmocom/rua/rua_msg_factory.h>
 
 #include <osmocom/hnodeb/rua.h>
 #include <osmocom/hnodeb/ranap.h>
 
+int hnb_tx_dt(struct hnb *hnb, struct msgb *txm)
+{
+	struct hnb_chan *chan;
+	struct msgb *rua;
+
+	chan = hnb->cs.chan;
+	if (!chan) {
+		printf("hnb_nas_tx_tmsi_realloc_compl(): No CS channel established yet.\n");
+		return -1;
+	}
+
+	rua = rua_new_dt(chan->is_ps, chan->conn_id, txm);
+	osmo_wqueue_enqueue(&hnb->wqueue, rua);
+	return 0;
+}
 
 static void hnb_rua_dt_handle(struct hnb *hnb, ANY_t *in)
 {

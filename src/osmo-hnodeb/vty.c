@@ -33,6 +33,7 @@
 #include <osmocom/ranap/ranap_msg_factory.h>
 
 #include <osmocom/hnodeb/hnbap.h>
+#include <osmocom/hnodeb/ranap.h>
 #include <osmocom/hnodeb/vty.h>
 #include <osmocom/hnodeb/hnodeb.h>
 

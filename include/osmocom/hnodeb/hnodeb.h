@@ -100,12 +100,5 @@ struct hnb {
 struct hnb *hnb_alloc(void *tall_ctx);
 int hnb_connect(struct hnb *hnb);
 
-void hnb_rx_iu_release(struct hnb *hnb);
-void hnb_rx_paging(struct hnb *hnb, const char *imsi);
-void hnb_nas_rx_dtap(struct hnb *hnb, void *data, int len);
-void hnb_rx_secmode_cmd(struct hnb *hnb, long ip_alg);
-
-struct msgb *gen_initue_lu(int is_ps, uint32_t conn_id, const char *imsi);
-
 extern void *tall_hnb_ctx;
 extern struct hnb *g_hnb;
