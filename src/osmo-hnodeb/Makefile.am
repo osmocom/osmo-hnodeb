@@ -31,6 +31,7 @@ bin_PROGRAMS = \
 osmo_hnodeb_SOURCES = \
 	main.c \
 	debug.c \
+	hnbap.c \
 	ranap.c \
 	rua.c \
 	vty.c \
