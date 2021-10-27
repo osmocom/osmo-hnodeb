@@ -33,6 +33,7 @@ osmo_hnodeb_SOURCES = \
 	debug.c \
 	ranap.c \
 	rua.c \
+	vty.c \
 	$(NULL)
 
 osmo_hnodeb_LDADD = \

@@ -54,7 +54,6 @@
 #include <osmocom/hnbap/hnbap_common.h>
 #include <osmocom/hnbap/hnbap_ies_defs.h>
 #include <osmocom/rua/rua_msg_factory.h>
-#include "asn1helpers.h"
 #include <osmocom/ranap/iu_helpers.h>
 
 #include <osmocom/ranap/ranap_msg_factory.h>
@@ -70,9 +69,10 @@
 
 #include <osmocom/hnodeb/rua.h>
 #include <osmocom/hnodeb/ranap.h>
+#include <osmocom/hnodeb/vty.h>
 #include <osmocom/hnodeb/hnodeb.h>
 
-static void *tall_hnb_ctx;
+void *tall_hnb_ctx;
 
 struct hnb g_hnb = {
 	.gw_addr = "127.0.0.1",
@@ -113,7 +113,7 @@ static int hnb_ue_de_register_tx(struct hnb *hnb)
 }
 #endif
 
-static int hnb_ue_register_tx(struct hnb *hnb, const char *imsi_str)
+int hnb_ue_register_tx(struct hnb *hnb, const char *imsi_str)
 {
 	struct msgb *msg;
 	int rc, imsi_len;
@@ -649,7 +649,7 @@ static int hnb_write_cb(struct osmo_fd *fd, struct msgb *msg)
 	return rc;
 }
 
-static void hnb_send_register_req(struct hnb *hnb)
+void hnb_send_register_req(struct hnb *hnb)
 {
 	HNBAP_HNBRegisterRequest_t request_out;
 	struct msgb *msg;
@@ -698,7 +698,7 @@ static void hnb_send_register_req(struct hnb *hnb)
 	osmo_wqueue_enqueue(&hnb->wqueue, msg);
 }
 
-static void hnb_send_deregister_req(struct hnb *hnb)
+void hnb_send_deregister_req(struct hnb *hnb)
 {
 	struct msgb *msg;
 	int rc;
@@ -744,79 +744,8 @@ static int sctp_sock_init(int fd)
 	return rc;
 }
 
-#define HNBAP_STR	"HNBAP related commands\n"
-#define HNB_STR		"HomeNodeB commands\n"
-#define UE_STR		"User Equipment commands\n"
-#define RANAP_STR	"RANAP related commands\n"
-#define CSPS_STR	"Circuit Switched\n" "Packet Switched\n"
 
-DEFUN(hnb_register, hnb_register_cmd,
-	"hnbap hnb register", HNBAP_STR HNB_STR "Send HNB-REGISTER REQUEST")
-{
-	hnb_send_register_req(&g_hnb);
-
-	return CMD_SUCCESS;
-}
-
-DEFUN(hnb_deregister, hnb_deregister_cmd,
-	"hnbap hnb deregister", HNBAP_STR HNB_STR "Send HNB-DEREGISTER REQUEST")
-{
-	hnb_send_deregister_req(&g_hnb);
-
-	return CMD_SUCCESS;
-}
-
-DEFUN(ue_register, ue_register_cmd,
-	"hnbap ue register IMSI", HNBAP_STR UE_STR "Send UE-REGISTER REQUEST")
-{
-	hnb_ue_register_tx(&g_hnb, argv[0]);
-
-	return CMD_SUCCESS;
-}
-
-DEFUN(asn_dbg, asn_dbg_cmd,
-	"asn-debug (1|0)", "Enable or disable libasn1c debugging")
-{
-	asn_debug = atoi(argv[0]);
-
-	return CMD_SUCCESS;
-}
-
-DEFUN(ranap_reset, ranap_reset_cmd,
-	"ranap reset (cs|ps)", RANAP_STR "Send RANAP RESET\n" CSPS_STR)
-{
-	int is_ps = 0;
-	struct msgb *msg, *rua;
-
-	RANAP_Cause_t cause = {
-		.present = RANAP_Cause_PR_transmissionNetwork,
-		.choice.transmissionNetwork = RANAP_CauseTransmissionNetwork_signalling_transport_resource_failure,
-	};
-
-	if (!strcmp(argv[0], "ps"))
-		is_ps = 1;
-
-	msg = ranap_new_msg_reset(is_ps, &cause);
-	rua = rua_new_udt(msg);
-	//msgb_free(msg);
-	osmo_wqueue_enqueue(&g_hnb.wqueue, rua);
-
-	return CMD_SUCCESS;
-}
-
-
-enum my_vty_nodes {
-	CHAN_NODE = _LAST_OSMOVTY_NODE,
-};
-
-static struct cmd_node chan_node = {
-	CHAN_NODE,
-	"%s(chan)> ",
-	1,
-};
-
-
-static struct msgb *gen_initue_lu(int is_ps, uint32_t conn_id, const char *imsi)
+struct msgb *gen_initue_lu(int is_ps, uint32_t conn_id, const char *imsi)
 {
 	uint8_t lu[] = { GSM48_PDISC_MM, GSM48_MT_MM_LOC_UPD_REQUEST,
 		         0x70, 0x62, 0xf2, 0x30, 0xff, 0xf3, 0x57,
@@ -846,52 +775,6 @@ static struct msgb *gen_initue_lu(int is_ps, uint32_t conn_id, const char *imsi)
 	 */
 
 	return ranap_new_msg_initial_ue(conn_id, is_ps, &rnc_id, lu, sizeof(lu));
-}
-
-DEFUN(chan, chan_cmd,
-	"channel (cs|ps) lu imsi IMSI",
-	"Open a new Signalling Connection\n"
-	"To Circuit-Switched CN\n"
-	"To Packet-Switched CN\n"
-	"Performing a Location Update\n"
-	)
-{
-	struct hnb_chan *chan;
-	struct msgb *msg, *rua;
-	static uint16_t conn_id = 42;
-
-	chan = talloc_zero(tall_hnb_ctx, struct hnb_chan);
-	if (!strcmp(argv[0], "ps"))
-		chan->is_ps = 1;
-	chan->imsi = talloc_strdup(chan, argv[1]);
-	chan->conn_id = conn_id;
-	conn_id++;
-
-	msg = gen_initue_lu(chan->is_ps, chan->conn_id, chan->imsi);
-	rua = rua_new_conn(chan->is_ps, chan->conn_id, msg);
-
-	osmo_wqueue_enqueue(&g_hnb.wqueue, rua);
-
-	vty->index = chan;
-	vty->node = CHAN_NODE;
-
-	if (!chan->is_ps)
-		g_hnb.cs.chan = chan;
-
-
-	return CMD_SUCCESS;
-}
-
-static void hnb_vty_init(void)
-{
-	install_element_ve(&asn_dbg_cmd);
-	install_element_ve(&hnb_register_cmd);
-	install_element_ve(&hnb_deregister_cmd);
-	install_element_ve(&ue_register_cmd);
-	install_element_ve(&ranap_reset_cmd);
-	install_element_ve(&chan_cmd);
-
-	install_node(&chan_node, NULL);
 }
 
 static void handle_options(int argc, char **argv)

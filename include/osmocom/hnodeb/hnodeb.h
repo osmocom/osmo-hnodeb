@@ -19,6 +19,8 @@
  */
 #pragma once
 
+#include <asn1c/asn1helpers.h>
+
 #include <osmocom/core/select.h>
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/write_queue.h>
@@ -101,4 +103,10 @@ void hnb_rx_paging(struct hnb *hnb, const char *imsi);
 void hnb_nas_rx_dtap(struct hnb *hnb, void *data, int len);
 void hnb_rx_secmode_cmd(struct hnb *hnb, long ip_alg);
 
+int hnb_ue_register_tx(struct hnb *hnb, const char *imsi_str);
+void hnb_send_register_req(struct hnb *hnb);
+void hnb_send_deregister_req(struct hnb *hnb);
+struct msgb *gen_initue_lu(int is_ps, uint32_t conn_id, const char *imsi);
+
+extern void *tall_hnb_ctx;
 extern struct hnb g_hnb;
