@@ -51,7 +51,7 @@ static struct cmd_node chan_node = {
 DEFUN(hnb_register, hnb_register_cmd,
 	"hnbap hnb register", HNBAP_STR HNB_STR "Send HNB-REGISTER REQUEST")
 {
-	hnb_send_register_req(&g_hnb);
+	hnb_send_register_req(g_hnb);
 
 	return CMD_SUCCESS;
 }
@@ -59,7 +59,7 @@ DEFUN(hnb_register, hnb_register_cmd,
 DEFUN(hnb_deregister, hnb_deregister_cmd,
 	"hnbap hnb deregister", HNBAP_STR HNB_STR "Send HNB-DEREGISTER REQUEST")
 {
-	hnb_send_deregister_req(&g_hnb);
+	hnb_send_deregister_req(g_hnb);
 
 	return CMD_SUCCESS;
 }
@@ -67,7 +67,7 @@ DEFUN(hnb_deregister, hnb_deregister_cmd,
 DEFUN(ue_register, ue_register_cmd,
 	"hnbap ue register IMSI", HNBAP_STR UE_STR "Send UE-REGISTER REQUEST")
 {
-	hnb_ue_register_tx(&g_hnb, argv[0]);
+	hnb_ue_register_tx(g_hnb, argv[0]);
 
 	return CMD_SUCCESS;
 }
@@ -97,7 +97,7 @@ DEFUN(ranap_reset, ranap_reset_cmd,
 	msg = ranap_new_msg_reset(is_ps, &cause);
 	rua = rua_new_udt(msg);
 	//msgb_free(msg);
-	osmo_wqueue_enqueue(&g_hnb.wqueue, rua);
+	osmo_wqueue_enqueue(&g_hnb->wqueue, rua);
 
 	return CMD_SUCCESS;
 }
@@ -124,13 +124,13 @@ DEFUN(chan, chan_cmd,
 	msg = gen_initue_lu(chan->is_ps, chan->conn_id, chan->imsi);
 	rua = rua_new_conn(chan->is_ps, chan->conn_id, msg);
 
-	osmo_wqueue_enqueue(&g_hnb.wqueue, rua);
+	osmo_wqueue_enqueue(&g_hnb->wqueue, rua);
 
 	vty->index = chan;
 	vty->node = CHAN_NODE;
 
 	if (!chan->is_ps)
-		g_hnb.cs.chan = chan;
+		g_hnb->cs.chan = chan;
 
 
 	return CMD_SUCCESS;
