@@ -81,38 +81,6 @@ struct hnb g_hnb = {
 
 struct msgb *rua_new_udt(struct msgb *inmsg);
 
-#if 0
-static int hnb_ue_de_register_tx(struct hnb *hnb)
-{
-	struct msgb *msg;
-	int rc;
-	uint32_t ctx_id;
-
-	UEDe_Register_t dereg;
-	UEDe_RegisterIEs_t dereg_ies;
-	memset(&dereg_ies, 0, sizeof(dereg_ies));
-
-	asn1_u24_to_bitstring(&dereg_ies.context_ID, &ctx_id, hnb->ctx_id);
-	dereg_ies.cause.present = Cause_PR_radioNetwork;
-	dereg_ies.cause.choice.radioNetwork = CauseRadioNetwork_connection_with_UE_lost;
-
-	memset(&dereg, 0, sizeof(dereg));
-	rc = hnbap_encode_uede_registeries(&dereg, &dereg_ies);
-	OSMO_ASSERT(rc == 0);
-
-	msg = hnbap_generate_initiating_message(ProcedureCode_id_UEDe_Register,
-						Criticality_ignore,
-						&asn_DEF_UEDe_Register,
-						&dereg);
-
-	ASN_STRUCT_FREE_CONTENTS_ONLY(asn_DEF_UEDe_Register, &dereg);
-
-	msgb_sctp_ppid(msg) = IUH_PPI_HNBAP;
-
-	return osmo_wqueue_enqueue(&hnb->wqueue, msg);
-}
-#endif
-
 int hnb_ue_register_tx(struct hnb *hnb, const char *imsi_str)
 {
 	struct msgb *msg;
@@ -847,41 +815,6 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 	sctp_sock_init(g_hnb.wqueue.bfd.fd);
-
-#if 0
-	/* some hard-coded message generation.  Doesn't make sense from
-	 * a protocol point of view but enables to look at the encoded
-	 * results in wireshark for manual verification */
-	{
-		struct msgb *msg, *rua;
-		const uint8_t nas[] = { 0, 1, 2, 3 };
-		const uint8_t ik[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-
-		msg = ranap_new_msg_dt(0, nas, sizeof(nas));
-		rua = rua_new_udt(msg);
-		osmo_wqueue_enqueue(&g_hnb.wqueue, rua);
-
-		msg = ranap_new_msg_sec_mod_cmd(ik, ik, RANAP_KeyStatus_new);
-		rua = rua_new_udt(msg);
-		osmo_wqueue_enqueue(&g_hnb.wqueue, rua);
-
-		msg = ranap_new_msg_iu_rel_cmd()
-		rua = rua_new_udt(msg);
-		osmo_wqueue_enqueue(&g_hnb.wqueue, rua);
-
-		msg = ranap_new_msg_paging_cmd("901990123456789", NULL, 0, 0);
-		rua = rua_new_udt(msg);
-		osmo_wqueue_enqueue(&g_hnb.wqueue, rua);
-
-		msg = ranap_new_msg_rab_assign_voice(1, 0x01020304, 0x1020);
-		rua = rua_new_udt(msg);
-		osmo_wqueue_enqueue(&g_hnb.wqueue, rua);
-
-		msg = ranap_new_msg_rab_assign_data(2, 0x01020304, 0x11223344);
-		rua = rua_new_udt(msg);
-		osmo_wqueue_enqueue(&g_hnb.wqueue, rua);
-	}
-#endif
 
 	while (1) {
 		rc = osmo_select_main(0);
