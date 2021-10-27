@@ -23,5 +23,4 @@
 
 struct hnb;
 
-void hnb_rua_dt_handle(struct hnb *hnb, struct ANY *in);
-void hnb_rua_cl_handle(struct hnb *hnb, struct ANY *in);
+int hnb_rua_rx(struct hnb *hnb, struct msgb *msg);

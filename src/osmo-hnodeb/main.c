@@ -476,66 +476,6 @@ int hnb_hnbap_rx(struct hnb *hnb, struct msgb *msg)
 
 extern void direct_transfer_nas_pdu_print(ANY_t *in);
 
-int hnb_rua_rx(struct hnb *hnb, struct msgb *msg)
-{
-	RUA_RUA_PDU_t _pdu, *pdu = &_pdu;
-	asn_dec_rval_t dec_ret;
-
-	memset(pdu, 0, sizeof(*pdu));
-	dec_ret = aper_decode(NULL, &asn_DEF_RUA_RUA_PDU, (void **) &pdu,
-			      msg->data, msgb_length(msg), 0, 0);
-	if (dec_ret.code != RC_OK) {
-		LOGP(DMAIN, LOGL_ERROR, "Error in ASN.1 decode\n");
-		return -EINVAL;
-	}
-
-	switch (pdu->present) {
-	case RUA_RUA_PDU_PR_successfulOutcome:
-		printf("RUA_RUA_PDU_PR_successfulOutcome\n");
-		break;
-	case RUA_RUA_PDU_PR_initiatingMessage:
-		printf("RUA_RUA_PDU_PR_initiatingMessage\n");
-		break;
-	case RUA_RUA_PDU_PR_NOTHING:
-		printf("RUA_RUA_PDU_PR_NOTHING\n");
-		break;
-	case RUA_RUA_PDU_PR_unsuccessfulOutcome:
-		printf("RUA_RUA_PDU_PR_unsuccessfulOutcome\n");
-		break;
-	default:
-		printf("Unexpected RUA message received\n");
-		break;
-	}
-
-	switch (pdu->choice.successfulOutcome.procedureCode) {
-	case RUA_ProcedureCode_id_ConnectionlessTransfer:
-		printf("RUA rx Connectionless Transfer\n");
-		hnb_rua_cl_handle(hnb, &pdu->choice.successfulOutcome.value);
-		break;
-	case RUA_ProcedureCode_id_Connect:
-		printf("RUA rx Connect\n");
-		break;
-	case RUA_ProcedureCode_id_DirectTransfer:
-		printf("RUA rx DirectTransfer\n");
-		hnb_rua_dt_handle(hnb, &pdu->choice.successfulOutcome.value);
-		break;
-	case RUA_ProcedureCode_id_Disconnect:
-		printf("RUA rx Disconnect\n");
-		break;
-	case RUA_ProcedureCode_id_ErrorIndication:
-		printf("RUA rx ErrorIndication\n");
-		break;
-	case RUA_ProcedureCode_id_privateMessage:
-		printf("RUA rx privateMessage\n");
-		break;
-	default:
-		printf("RUA rx unknown message\n");
-		break;
-	}
-
-	return 0;
-}
-
 static int hnb_read_cb(struct osmo_fd *fd)
 {
 	struct hnb *hnb = fd->data;
