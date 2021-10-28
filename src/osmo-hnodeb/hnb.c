@@ -98,9 +98,12 @@ static int hnb_iuh_read_cb(struct osmo_stream_cli *conn)
 	return rc;
 }
 
-static int hnb_iuh_connect_cb(struct osmo_stream_cli *cli)
+static int hnb_iuh_connect_cb(struct osmo_stream_cli *conn)
 {
 	LOGP(DMAIN, LOGL_NOTICE, "Iuh connected to HNBGW\n");
+	struct hnb *hnb = osmo_stream_cli_get_data(conn);
+
+	hnb_send_register_req(hnb);
 	return 0;
 }
 
