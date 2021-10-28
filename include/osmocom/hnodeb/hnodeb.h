@@ -59,8 +59,7 @@ struct hnb {
 		uint16_t local_port;
 		char *remote_addr;
 		uint16_t remote_port;
-		/*! SCTP socket + write queue for Iuh to this specific HNB */
-		struct osmo_wqueue wqueue;
+		struct osmo_stream_cli *client;
 	} iuh;
 
 	uint16_t rnc_id;
@@ -72,6 +71,7 @@ struct hnb {
 	} cs;
 };
 struct hnb *hnb_alloc(void *tall_ctx);
+void hnb_free(struct hnb *hnb);
 int hnb_connect(struct hnb *hnb);
 
 int hnb_iuh_send(struct hnb *hnb, struct msgb *msg);

@@ -36,22 +36,10 @@
 #include <osmocom/hnodeb/rua.h>
 #include <osmocom/hnodeb/hnodeb.h>
 
-static int sctp_sock_init(int fd)
+static int hnb_iuh_read_cb(struct osmo_stream_cli *conn)
 {
-	struct sctp_event_subscribe event;
-	int rc;
-
-	/* subscribe for all events */
-	memset((uint8_t *)&event, 1, sizeof(event));
-	rc = setsockopt(fd, IPPROTO_SCTP, SCTP_EVENTS,
-			&event, sizeof(event));
-
-	return rc;
-}
-
-static int hnb_iuh_read_cb(struct osmo_fd *fd)
-{
-	struct hnb *hnb = fd->data;
+	struct osmo_fd *fd = osmo_stream_cli_get_ofd(conn);
+	struct hnb *hnb = osmo_stream_cli_get_data(conn);
 	struct sctp_sndrcvinfo sinfo;
 	struct msgb *msg = msgb_alloc(IUH_MSGB_SIZE, "Iuh rx");
 	int flags = 0;
@@ -65,15 +53,11 @@ static int hnb_iuh_read_cb(struct osmo_fd *fd)
 	if (rc < 0) {
 		LOGP(DMAIN, LOGL_ERROR, "Error during sctp_recvmsg()\n");
 		/* FIXME: clean up after disappeared HNB */
-		close(fd->fd);
-		osmo_fd_unregister(fd);
+		osmo_stream_cli_close(conn);
 		return rc;
 	} else if (rc == 0) {
 		LOGP(DMAIN, LOGL_INFO, "Connection to HNB closed\n");
-		close(fd->fd);
-		osmo_fd_unregister(fd);
-		fd->fd = -1;
-
+		osmo_stream_cli_close(conn);
 		return -1;
 	} else {
 		msgb_put(msg, rc);
@@ -114,40 +98,46 @@ static int hnb_iuh_read_cb(struct osmo_fd *fd)
 	return rc;
 }
 
-static int hnb_iuh_write_cb(struct osmo_fd *fd, struct msgb *msg)
+static int hnb_iuh_connect_cb(struct osmo_stream_cli *cli)
 {
-	/* struct hnb *ctx = fd->data; */
-	struct sctp_sndrcvinfo sinfo = {
-		.sinfo_ppid = htonl(msgb_sctp_ppid(msg)),
-		.sinfo_stream = 0,
-	};
-	int rc;
-
-	LOGP(DMAIN, LOGL_DEBUG, "Sending: %s\n", osmo_hexdump(msgb_data(msg), msgb_length(msg)));
-	rc = sctp_send(fd->fd, msgb_data(msg), msgb_length(msg),
-			&sinfo, 0);
-	/* we don't need to msgb_free(), write_queue does this for us */
-	return rc;
+	LOGP(DMAIN, LOGL_NOTICE, "Iuh connected to HNBGW\n");
+	return 0;
 }
 
 struct hnb *hnb_alloc(void *tall_ctx)
 {
 	struct hnb *hnb;
+	struct osmo_stream_cli *cli;
+
 	hnb = talloc_zero(tall_ctx, struct hnb);
 	if (!hnb)
 		return NULL;
 
-	hnb->iuh.local_addr = NULL;
+	hnb->iuh.local_addr = talloc_strdup(hnb, "0.0.0.0");
 	hnb->iuh.local_port = 0;
 	hnb->iuh.remote_addr = talloc_strdup(hnb, "127.0.0.1");
 	hnb->iuh.remote_port = IUH_DEFAULT_SCTP_PORT;
 
-	osmo_wqueue_init(&hnb->iuh.wqueue, 16);
-	hnb->iuh.wqueue.bfd.data = hnb;
-	hnb->iuh.wqueue.read_cb = hnb_iuh_read_cb;
-	hnb->iuh.wqueue.write_cb = hnb_iuh_write_cb;
+	cli = osmo_stream_cli_create(hnb);
+	OSMO_ASSERT(cli);
+	hnb->iuh.client = cli;
+	osmo_stream_cli_set_nodelay(cli, true);
+	osmo_stream_cli_set_proto(cli, IPPROTO_SCTP);
+	osmo_stream_cli_set_reconnect_timeout(cli, 5);
+	osmo_stream_cli_set_connect_cb(cli, hnb_iuh_connect_cb);
+	osmo_stream_cli_set_read_cb(cli, hnb_iuh_read_cb);
+	osmo_stream_cli_set_data(cli, hnb);
 
 	return hnb;
+}
+
+void hnb_free(struct hnb *hnb)
+{
+	if (hnb->iuh.client) {
+		osmo_stream_cli_destroy(hnb->iuh.client);
+		hnb->iuh.client = NULL;
+	}
+	talloc_free(hnb);
 }
 
 int hnb_connect(struct hnb *hnb)
@@ -157,21 +147,23 @@ int hnb_connect(struct hnb *hnb)
 	LOGP(DMAIN, LOGL_INFO, "Iuh Connect: %s[:%u] => %s[:%u]\n",
 	     hnb->iuh.local_addr, hnb->iuh.local_port, hnb->iuh.remote_addr, hnb->iuh.remote_port);
 
-	rc = osmo_sock_init2_ofd(&hnb->iuh.wqueue.bfd, AF_INET, SOCK_STREAM, IPPROTO_SCTP,
-			   hnb->iuh.local_addr, hnb->iuh.local_port,
-			   hnb->iuh.remote_addr, hnb->iuh.remote_port,
-			   OSMO_SOCK_F_BIND |OSMO_SOCK_F_CONNECT);
-	if (rc < 0)
-		return rc;
-	sctp_sock_init(hnb->iuh.wqueue.bfd.fd);
+	osmo_stream_cli_set_addrs(hnb->iuh.client, (const char**)&hnb->iuh.remote_addr, 1);
+	osmo_stream_cli_set_port(hnb->iuh.client, hnb->iuh.remote_port);
+	osmo_stream_cli_set_local_addrs(hnb->iuh.client, (const char**)&hnb->iuh.local_addr, 1);
+	osmo_stream_cli_set_local_port(hnb->iuh.client, hnb->iuh.local_port);
+	rc = osmo_stream_cli_open(hnb->iuh.client);
+	if (rc < 0) {
+		LOGP(DMAIN, LOGL_ERROR, "Unable to open stream client for Iuh %s[:%u] => %s[:%u]\n",
+		     hnb->iuh.local_addr, hnb->iuh.local_port, hnb->iuh.remote_addr, hnb->iuh.remote_port);
+		/* we don't return error in here because osmo_stream_cli_open()
+		   will continue to retry (due to timeout being explicitly set with
+		   osmo_stream_cli_set_reconnect_timeout() above) to connect so the error is transient */
+	}
 	return 0;
 }
 
 int hnb_iuh_send(struct hnb *hnb, struct msgb *msg)
 {
-	int rc;
-	rc = osmo_wqueue_enqueue(&hnb->iuh.wqueue, msg);
-	if (rc < 0)
-		msgb_free(msg);
-	return rc;
+	osmo_stream_cli_send(hnb->iuh.client, msg);
+	return 0;
 }
