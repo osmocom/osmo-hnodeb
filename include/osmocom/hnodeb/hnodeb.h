@@ -70,8 +70,12 @@ struct hnb_chan {
 };
 
 struct hnb {
-	const char *gw_addr;
-	uint16_t gw_port;
+	struct {
+		char *local_addr;
+		uint16_t local_port;
+		char *remote_addr;
+		uint16_t remote_port;
+	} iuh;
 	/*! SCTP listen socket for incoming connections */
 	struct osmo_fd conn_fd;
 
@@ -90,8 +94,6 @@ struct hnb {
 	uint16_t rnc_id;
 
 	uint32_t ctx_id;
-
-	int ues;
 
 	struct {
 		struct hnb_chan *chan;

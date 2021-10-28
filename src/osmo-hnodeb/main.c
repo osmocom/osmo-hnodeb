@@ -75,6 +75,7 @@ static struct {
 static struct vty_app_info vty_info = {
 	.name		= "OsmoHNodeB",
 	.version	= PACKAGE_VERSION,
+	.go_parent_cb	= hnb_vty_go_parent,
 };
 
 static void print_usage()
@@ -140,12 +141,10 @@ static void handle_options(int argc, char **argv)
 			{"log-level", 1, 0, 'e'},
 			{"vty-ref-mode", 1, &long_option, 1},
 			{"vty-ref-xml", 0, &long_option, 2},
-			{ "ues", 1, 0, 'u' },
-			{ "gw-addr", 1, 0, 'g' },
 			{ 0, 0, 0, 0 },
 		};
 
-		c = getopt_long(argc, argv, "hd:Dc:sTVe:u:g:", long_options, &idx);
+		c = getopt_long(argc, argv, "hd:Dc:sTVe:", long_options, &idx);
 
 		if (c == -1)
 			break;
@@ -179,12 +178,6 @@ static void handle_options(int argc, char **argv)
 			break;
 		case 'e':
 			log_set_log_level(osmo_stderr_target, atoi(optarg));
-			break;
-		case 'u':
-			g_hnb->ues = atoi(optarg);
-			break;
-		case 'g':
-			g_hnb->gw_addr = optarg;
 			break;
 		default:
 			/* catch unknown options *as well as* missing arguments. */

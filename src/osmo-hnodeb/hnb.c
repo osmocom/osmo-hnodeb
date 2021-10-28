@@ -137,8 +137,10 @@ struct hnb *hnb_alloc(void *tall_ctx)
 	if (!hnb)
 		return NULL;
 
-	hnb->gw_addr = "127.0.0.1",
-	hnb->gw_port = IUH_DEFAULT_SCTP_PORT,
+	hnb->iuh.local_addr = NULL;
+	hnb->iuh.local_port = 0;
+	hnb->iuh.remote_addr = talloc_strdup(hnb, "127.0.0.1");
+	hnb->iuh.remote_port = IUH_DEFAULT_SCTP_PORT;
 
 	osmo_wqueue_init(&hnb->wqueue, 16);
 	hnb->wqueue.bfd.data = hnb;
@@ -151,9 +153,14 @@ struct hnb *hnb_alloc(void *tall_ctx)
 int hnb_connect(struct hnb *hnb)
 {
 	int rc;
-	rc = osmo_sock_init_ofd(&hnb->wqueue.bfd, AF_INET, SOCK_STREAM,
-			   IPPROTO_SCTP, hnb->gw_addr,
-			   hnb->gw_port, OSMO_SOCK_F_CONNECT);
+
+	LOGP(DMAIN, LOGL_INFO, "Iuh Connect: %s[:%u] => %s[:%u]\n",
+	     hnb->iuh.local_addr, hnb->iuh.local_port, hnb->iuh.remote_addr, hnb->iuh.remote_port);
+
+	rc = osmo_sock_init2_ofd(&hnb->wqueue.bfd, AF_INET, SOCK_STREAM, IPPROTO_SCTP,
+			   hnb->iuh.local_addr, hnb->iuh.local_port,
+			   hnb->iuh.remote_addr, hnb->iuh.remote_port,
+			   OSMO_SOCK_F_BIND |OSMO_SOCK_F_CONNECT);
 	if (rc < 0)
 		return rc;
 	sctp_sock_init(hnb->wqueue.bfd.fd);

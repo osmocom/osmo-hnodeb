@@ -25,7 +25,10 @@
 #include <osmocom/vty/command.h>
 
 enum hnb_vty_nodes {
-	CHAN_NODE = _LAST_OSMOVTY_NODE,
+	HNODEB_NODE = _LAST_OSMOVTY_NODE,
+	IUH_NODE,
+	CHAN_NODE,
 };
 
 void hnb_vty_init(void);
+int hnb_vty_go_parent(struct vty *vty);

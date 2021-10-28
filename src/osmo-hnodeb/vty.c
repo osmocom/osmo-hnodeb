@@ -37,6 +37,119 @@
 #include <osmocom/hnodeb/vty.h>
 #include <osmocom/hnodeb/hnodeb.h>
 
+int hnb_vty_go_parent(struct vty *vty)
+{
+	switch (vty->node) {
+	case IUH_NODE:
+		vty->node = HNODEB_NODE;
+		vty->index = g_hnb;
+		break;
+	case HNODEB_NODE:
+		vty->node = CONFIG_NODE;
+		vty->index = g_hnb;
+		break;
+	case CONFIG_NODE:
+		vty->node = ENABLE_NODE;
+		vty->index = NULL;
+		break;
+	default:
+		vty->node = CONFIG_NODE;
+		vty->index = NULL;
+		break;
+	}
+
+	return vty->node;
+}
+
+static struct cmd_node hnodeb_node = {
+	HNODEB_NODE,
+	"%s(config-hnodeb)# ",
+	1,
+};
+
+#define HNODEB_STR "Configure the HNodeB\n"
+
+DEFUN(cfg_hnodeb,
+      cfg_hnodeb_cmd,
+      "hnodeb", HNODEB_STR)
+{
+	OSMO_ASSERT(g_hnb);
+	vty->index = g_hnb;
+	vty->node = HNODEB_NODE;
+
+	return CMD_SUCCESS;
+}
+
+static struct cmd_node iuh_node = {
+	IUH_NODE,
+	"%s(config-iuh)# ",
+	1,
+};
+
+DEFUN(cfg_hnodeb_iuh,
+      cfg_hnodeb_iuh_cmd,
+      "iuh", "Configure Iuh options\n")
+{
+	OSMO_ASSERT(g_hnb);
+	vty->index = g_hnb;
+	vty->node = IUH_NODE;
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_hnodeb_iuh_local_ip, cfg_hnodeb_iuh_local_ip_cmd,
+      "local-ip " VTY_IPV46_CMD,
+      "Bind Iuh connection on local IP address\n"
+      "Local interface IPv4 address\n"
+      "Local interface IPv6 address\n")
+{
+	osmo_talloc_replace_string(g_hnb, &g_hnb->iuh.local_addr, argv[0]);
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_hnodeb_iuh_local_port, cfg_hnodeb_iuh_local_port_cmd,
+      "local-port <1-65535>",
+      "Bind Iuh connection on local SCTP port\n"
+      "Local interface port\n")
+{
+	g_hnb->iuh.local_port = atoi(argv[0]);
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_hnodeb_iuh_remote_ip, cfg_hnodeb_iuh_remote_ip_cmd,
+      "remote-ip " VTY_IPV46_CMD,
+      "Connect to HNBGW over Iuh on remote IP address\n"
+      "Remote interface IPv4 address\n"
+      "Remote interface IPv6 address\n")
+{
+	osmo_talloc_replace_string(g_hnb, &g_hnb->iuh.remote_addr, argv[0]);
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_hnodeb_iuh_remote_port, cfg_hnodeb_iuh_remote_port_cmd,
+      "remote-port <1-65535>",
+      "Connect to HNBGW over Iuh on remote SCTP port\n"
+      "Remote interface port (default: "OSMO_STRINGIFY_VAL(IUH_DEFAULT_SCTP_PORT) ")\n")
+{
+	g_hnb->iuh.remote_port = atoi(argv[0]);
+	return CMD_SUCCESS;
+}
+
+
+static int config_write_hnodeb(struct vty *vty)
+{
+	vty_out(vty, "hnodeb%s", VTY_NEWLINE);
+	vty_out(vty, " iuh%s", VTY_NEWLINE);
+	if (g_hnb->iuh.local_addr)
+		vty_out(vty, "  local-ip %s%s", g_hnb->iuh.local_addr, VTY_NEWLINE);
+	if (g_hnb->iuh.local_port)
+		vty_out(vty, "  local-port %u%s", g_hnb->iuh.local_port, VTY_NEWLINE);
+	vty_out(vty, "  remote-ip %s%s", g_hnb->iuh.remote_addr, VTY_NEWLINE);
+	vty_out(vty, "  remote-port %u%s", g_hnb->iuh.remote_port, VTY_NEWLINE);
+	return CMD_SUCCESS;
+}
+
+
 static struct cmd_node chan_node = {
 	CHAN_NODE,
 	"%s(chan)> ",
@@ -139,6 +252,15 @@ DEFUN(chan, chan_cmd,
 
 void hnb_vty_init(void)
 {
+	install_element(CONFIG_NODE, &cfg_hnodeb_cmd);
+	install_node(&hnodeb_node, config_write_hnodeb);
+	install_element(HNODEB_NODE, &cfg_hnodeb_iuh_cmd);
+	install_node(&iuh_node, NULL);
+	install_element(IUH_NODE, &cfg_hnodeb_iuh_local_ip_cmd);
+	install_element(IUH_NODE, &cfg_hnodeb_iuh_local_port_cmd);
+	install_element(IUH_NODE, &cfg_hnodeb_iuh_remote_ip_cmd);
+	install_element(IUH_NODE, &cfg_hnodeb_iuh_remote_port_cmd);
+
 	install_element_ve(&asn_dbg_cmd);
 	install_element_ve(&hnb_register_cmd);
 	install_element_ve(&hnb_deregister_cmd);
