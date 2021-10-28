@@ -83,6 +83,17 @@ DEFUN(cfg_hnodeb,
 	return CMD_SUCCESS;
 }
 
+DEFUN_USRATTR(cfg_hnodeb_identity,
+	      cfg_hnodeb_identity_cmd,
+	      0,
+	      "identity TEXT",
+	      "Set the HNB-identity of this HnodeB\n" "HNB-Identity\n")
+{
+	struct hnb *hnb = (struct hnb *)vty->index;
+	osmo_talloc_replace_string(g_hnb, &hnb->identity, argv[0]);
+	return CMD_SUCCESS;
+}
+
 DEFUN_USRATTR(cfg_hnodeb_ncc,
 	      cfg_hnodeb_ncc_cmd,
 	      0,
@@ -239,6 +250,7 @@ DEFUN(cfg_hnodeb_iuh_remote_port, cfg_hnodeb_iuh_remote_port_cmd,
 static int config_write_hnodeb(struct vty *vty)
 {
 	vty_out(vty, "hnodeb%s", VTY_NEWLINE);
+	vty_out(vty, " identity %s%s", g_hnb->identity, VTY_NEWLINE);
 	vty_out(vty, " network country code %s%s", osmo_mcc_name(g_hnb->plmn.mcc), VTY_NEWLINE);
 	vty_out(vty, " mobile network code %s%s",
 		osmo_mnc_name(g_hnb->plmn.mnc, g_hnb->plmn.mnc_3_digits), VTY_NEWLINE);
@@ -361,6 +373,7 @@ void hnb_vty_init(void)
 {
 	install_element(CONFIG_NODE, &cfg_hnodeb_cmd);
 	install_node(&hnodeb_node, config_write_hnodeb);
+	install_element(HNODEB_NODE, &cfg_hnodeb_identity_cmd);
 	install_element(HNODEB_NODE, &cfg_hnodeb_ncc_cmd);
 	install_element(HNODEB_NODE, &cfg_hnodeb_mnc_cmd);
 	install_element(HNODEB_NODE, &cfg_hnodeb_ci_cmd);

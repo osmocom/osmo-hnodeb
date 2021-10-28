@@ -116,6 +116,7 @@ struct hnb *hnb_alloc(void *tall_ctx)
 	if (!hnb)
 		return NULL;
 
+	hnb->identity = talloc_strdup(hnb, "OsmoHNodeB");
 	hnb->plmn = (struct osmo_plmn_id){
 		.mcc = 1,
 		.mnc = 1,

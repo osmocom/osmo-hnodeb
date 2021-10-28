@@ -55,6 +55,7 @@ struct hnb_chan {
 };
 
 struct hnb {
+	char *identity; /* HNB-Identity */
 	struct osmo_plmn_id plmn;
 	uint16_t cell_identity;
 	uint16_t lac;
