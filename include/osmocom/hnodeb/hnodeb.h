@@ -46,23 +46,6 @@ extern const struct log_info hnb_log_info;
 
 #define IUH_MSGB_SIZE	2048
 
-struct umts_cell_id {
-	uint16_t mcc;	/*!< Mobile Country Code */
-	uint16_t mnc;	/*!< Mobile Network Code */
-	uint16_t lac;	/*!< Locaton Area Code */
-	uint16_t rac;	/*!< Routing Area Code */
-	uint16_t sac;	/*!< Service Area Code */
-	uint32_t cid;	/*!< Cell ID */
-};
-
-struct ue_context {
-	/*! Entry in the HNB-global list of UE */
-	struct llist_head list;
-	/*! Unique Context ID for this UE */
-	uint32_t context_id;
-	char imsi[16+1];
-};
-
 struct hnb_chan {
 	int is_ps;
 	uint32_t conn_id;
@@ -76,20 +59,8 @@ struct hnb {
 		char *remote_addr;
 		uint16_t remote_port;
 	} iuh;
-	/*! SCTP listen socket for incoming connections */
-	struct osmo_fd conn_fd;
-
 	/*! SCTP socket + write queue for Iuh to this specific HNB */
 	struct osmo_wqueue wqueue;
-	/*! copied from HNB-Identity-Info IE */
-	char identity_info[256];
-	/*! copied from Cell Identity IE */
-	struct umts_cell_id id;
-
-	/*! SCTP stream ID for HNBAP */
-	uint16_t hnbap_stream;
-	/*! SCTP stream ID for RUA */
-	uint16_t rua_stream;
 
 	uint16_t rnc_id;
 
