@@ -116,6 +116,11 @@ struct hnb *hnb_alloc(void *tall_ctx)
 	if (!hnb)
 		return NULL;
 
+	hnb->plmn = (struct osmo_plmn_id){
+		.mcc = 1,
+		.mnc = 1,
+	};
+
 	hnb->iuh.local_addr = talloc_strdup(hnb, "0.0.0.0");
 	hnb->iuh.local_port = 0;
 	hnb->iuh.remote_addr = talloc_strdup(hnb, "127.0.0.1");

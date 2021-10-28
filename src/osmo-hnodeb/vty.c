@@ -68,6 +68,7 @@ static struct cmd_node hnodeb_node = {
 };
 
 #define HNODEB_STR "Configure the HNodeB\n"
+#define CODE_CMD_STR "Code commands\n"
 
 DEFUN(cfg_hnodeb,
       cfg_hnodeb_cmd,
@@ -76,6 +77,52 @@ DEFUN(cfg_hnodeb,
 	OSMO_ASSERT(g_hnb);
 	vty->index = g_hnb;
 	vty->node = HNODEB_NODE;
+
+	return CMD_SUCCESS;
+}
+
+DEFUN_USRATTR(cfg_hnodeb_ncc,
+	      cfg_hnodeb_ncc_cmd,
+	      0,
+	      "network country code <1-999>",
+	      "Set the GSM network country code\n"
+	      "Country commands\n"
+	      CODE_CMD_STR
+	      "Network Country Code to use\n")
+{
+	struct hnb *hnb = (struct hnb *)vty->index;
+	uint16_t mcc;
+
+	if (osmo_mcc_from_str(argv[0], &mcc)) {
+		vty_out(vty, "%% Error decoding MCC: %s%s", argv[0], VTY_NEWLINE);
+		return CMD_WARNING;
+	}
+
+	hnb->plmn.mcc = mcc;
+
+	return CMD_SUCCESS;
+}
+
+DEFUN_USRATTR(cfg_hnodeb_mnc,
+	      cfg_hnodeb_mnc_cmd,
+	      0,
+	      "mobile network code <0-999>",
+	      "Set the GSM mobile network code\n"
+	      "Network Commands\n"
+	      CODE_CMD_STR
+	      "Mobile Network Code to use\n")
+{
+	struct hnb *hnb = (struct hnb *)vty->index;
+	uint16_t mnc;
+	bool mnc_3_digits;
+
+	if (osmo_mnc_from_str(argv[0], &mnc, &mnc_3_digits)) {
+		vty_out(vty, "%% Error decoding MNC: %s%s", argv[0], VTY_NEWLINE);
+		return CMD_WARNING;
+	}
+
+	hnb->plmn.mnc = mnc;
+	hnb->plmn.mnc_3_digits = mnc_3_digits;
 
 	return CMD_SUCCESS;
 }
@@ -139,6 +186,9 @@ DEFUN(cfg_hnodeb_iuh_remote_port, cfg_hnodeb_iuh_remote_port_cmd,
 static int config_write_hnodeb(struct vty *vty)
 {
 	vty_out(vty, "hnodeb%s", VTY_NEWLINE);
+	vty_out(vty, " network country code %s%s", osmo_mcc_name(g_hnb->plmn.mcc), VTY_NEWLINE);
+	vty_out(vty, " mobile network code %s%s",
+		osmo_mnc_name(g_hnb->plmn.mnc, g_hnb->plmn.mnc_3_digits), VTY_NEWLINE);
 	vty_out(vty, " iuh%s", VTY_NEWLINE);
 	if (g_hnb->iuh.local_addr)
 		vty_out(vty, "  local-ip %s%s", g_hnb->iuh.local_addr, VTY_NEWLINE);
@@ -254,6 +304,8 @@ void hnb_vty_init(void)
 {
 	install_element(CONFIG_NODE, &cfg_hnodeb_cmd);
 	install_node(&hnodeb_node, config_write_hnodeb);
+	install_element(HNODEB_NODE, &cfg_hnodeb_ncc_cmd);
+	install_element(HNODEB_NODE, &cfg_hnodeb_mnc_cmd);
 	install_element(HNODEB_NODE, &cfg_hnodeb_iuh_cmd);
 	install_node(&iuh_node, NULL);
 	install_element(IUH_NODE, &cfg_hnodeb_iuh_local_ip_cmd);

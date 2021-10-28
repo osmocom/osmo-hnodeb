@@ -156,7 +156,7 @@ void hnb_send_register_req(struct hnb *hnb)
 	uint16_t lac, sac;
 	uint8_t rac;
 	uint32_t cid;
-	uint8_t plmn[] = {0x09, 0xf1, 0x99};
+	uint8_t plmn[3];
 	char identity[50] = "ATestHNB@";
 
 	HNBAP_HNBRegisterRequestIEs_t request;
@@ -175,10 +175,9 @@ void hnb_send_register_req(struct hnb *hnb)
 	request.hnB_Identity.hNB_Identity_Info.buf = (uint8_t*) identity;
 	request.hnB_Identity.hNB_Identity_Info.size = strlen(identity);
 
+	osmo_plmn_to_bcd(plmn, &hnb->plmn);
 	request.plmNidentity.buf = plmn;
-	request.plmNidentity.size = 3;
-
-
+	request.plmNidentity.size = sizeof(plmn);
 
 	memset(&request_out, 0, sizeof(request_out));
 	rc = hnbap_encode_hnbregisterrequesties(&request_out, &request);

@@ -25,6 +25,7 @@
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/write_queue.h>
 #include <osmocom/core/logging.h>
+#include <osmocom/gsm/gsm23003.h>
 
 enum {
 	DMAIN,
@@ -54,6 +55,7 @@ struct hnb_chan {
 };
 
 struct hnb {
+	struct osmo_plmn_id plmn;
 	struct {
 		char *local_addr;
 		uint16_t local_port;
