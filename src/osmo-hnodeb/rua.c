@@ -41,7 +41,7 @@ int hnb_tx_dt(struct hnb *hnb, struct msgb *txm)
 	}
 
 	rua = rua_new_dt(chan->is_ps, chan->conn_id, txm);
-	osmo_wqueue_enqueue(&hnb->wqueue, rua);
+	hnb_iuh_send(hnb, rua);
 	return 0;
 }
 

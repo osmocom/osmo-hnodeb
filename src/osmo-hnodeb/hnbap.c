@@ -145,7 +145,7 @@ int hnb_ue_register_tx(struct hnb *hnb, const char *imsi_str)
 
 	msgb_sctp_ppid(msg) = IUH_PPI_HNBAP;
 
-	return osmo_wqueue_enqueue(&hnb->wqueue, msg);
+	return hnb_iuh_send(hnb, msg);
 }
 
 void hnb_send_register_req(struct hnb *hnb)
@@ -194,7 +194,7 @@ void hnb_send_register_req(struct hnb *hnb)
 
 	msgb_sctp_ppid(msg) = IUH_PPI_HNBAP;
 
-	osmo_wqueue_enqueue(&hnb->wqueue, msg);
+	hnb_iuh_send(hnb, msg);
 }
 
 void hnb_send_deregister_req(struct hnb *hnb)
@@ -222,5 +222,5 @@ void hnb_send_deregister_req(struct hnb *hnb)
 
 	msgb_sctp_ppid(msg) = IUH_PPI_HNBAP;
 
-	osmo_wqueue_enqueue(&hnb->wqueue, msg);
+	hnb_iuh_send(hnb, msg);
 }

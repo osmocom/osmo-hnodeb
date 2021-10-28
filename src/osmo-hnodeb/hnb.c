@@ -49,7 +49,7 @@ static int sctp_sock_init(int fd)
 	return rc;
 }
 
-static int hnb_read_cb(struct osmo_fd *fd)
+static int hnb_iuh_read_cb(struct osmo_fd *fd)
 {
 	struct hnb *hnb = fd->data;
 	struct sctp_sndrcvinfo sinfo;
@@ -114,7 +114,7 @@ static int hnb_read_cb(struct osmo_fd *fd)
 	return rc;
 }
 
-static int hnb_write_cb(struct osmo_fd *fd, struct msgb *msg)
+static int hnb_iuh_write_cb(struct osmo_fd *fd, struct msgb *msg)
 {
 	/* struct hnb *ctx = fd->data; */
 	struct sctp_sndrcvinfo sinfo = {
@@ -142,10 +142,10 @@ struct hnb *hnb_alloc(void *tall_ctx)
 	hnb->iuh.remote_addr = talloc_strdup(hnb, "127.0.0.1");
 	hnb->iuh.remote_port = IUH_DEFAULT_SCTP_PORT;
 
-	osmo_wqueue_init(&hnb->wqueue, 16);
-	hnb->wqueue.bfd.data = hnb;
-	hnb->wqueue.read_cb = hnb_read_cb;
-	hnb->wqueue.write_cb = hnb_write_cb;
+	osmo_wqueue_init(&hnb->iuh.wqueue, 16);
+	hnb->iuh.wqueue.bfd.data = hnb;
+	hnb->iuh.wqueue.read_cb = hnb_iuh_read_cb;
+	hnb->iuh.wqueue.write_cb = hnb_iuh_write_cb;
 
 	return hnb;
 }
@@ -157,12 +157,21 @@ int hnb_connect(struct hnb *hnb)
 	LOGP(DMAIN, LOGL_INFO, "Iuh Connect: %s[:%u] => %s[:%u]\n",
 	     hnb->iuh.local_addr, hnb->iuh.local_port, hnb->iuh.remote_addr, hnb->iuh.remote_port);
 
-	rc = osmo_sock_init2_ofd(&hnb->wqueue.bfd, AF_INET, SOCK_STREAM, IPPROTO_SCTP,
+	rc = osmo_sock_init2_ofd(&hnb->iuh.wqueue.bfd, AF_INET, SOCK_STREAM, IPPROTO_SCTP,
 			   hnb->iuh.local_addr, hnb->iuh.local_port,
 			   hnb->iuh.remote_addr, hnb->iuh.remote_port,
 			   OSMO_SOCK_F_BIND |OSMO_SOCK_F_CONNECT);
 	if (rc < 0)
 		return rc;
-	sctp_sock_init(hnb->wqueue.bfd.fd);
+	sctp_sock_init(hnb->iuh.wqueue.bfd.fd);
 	return 0;
+}
+
+int hnb_iuh_send(struct hnb *hnb, struct msgb *msg)
+{
+	int rc;
+	rc = osmo_wqueue_enqueue(&hnb->iuh.wqueue, msg);
+	if (rc < 0)
+		msgb_free(msg);
+	return rc;
 }

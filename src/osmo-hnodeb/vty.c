@@ -211,7 +211,7 @@ DEFUN(ranap_reset, ranap_reset_cmd,
 	msg = ranap_new_msg_reset(is_ps, &cause);
 	rua = rua_new_udt(msg);
 	//msgb_free(msg);
-	osmo_wqueue_enqueue(&g_hnb->wqueue, rua);
+	hnb_iuh_send(g_hnb, rua);
 
 	return CMD_SUCCESS;
 }
@@ -238,7 +238,7 @@ DEFUN(chan, chan_cmd,
 	msg = gen_initue_lu(chan->is_ps, chan->conn_id, chan->imsi);
 	rua = rua_new_conn(chan->is_ps, chan->conn_id, msg);
 
-	osmo_wqueue_enqueue(&g_hnb->wqueue, rua);
+	hnb_iuh_send(g_hnb, rua);
 
 	vty->index = chan;
 	vty->node = CHAN_NODE;
