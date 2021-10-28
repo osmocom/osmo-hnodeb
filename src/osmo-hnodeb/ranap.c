@@ -110,16 +110,17 @@ void hnb_rua_cl_handle_ranap(struct hnb *hnb,
 	}
 }
 
-struct msgb *gen_initue_lu(int is_ps, uint32_t conn_id, const char *imsi)
+struct msgb *gen_initue_lu(const struct hnb *hnb, int is_ps, uint32_t conn_id, const char *imsi)
 {
 	uint8_t lu[] = { GSM48_PDISC_MM, GSM48_MT_MM_LOC_UPD_REQUEST,
 		         0x70, 0x62, 0xf2, 0x30, 0xff, 0xf3, 0x57,
 		/*	 len, IMSI/type, IMSI-------------------------------- */
 			 0x08, 0x29, 0x26, 0x24, 0x10, 0x32, 0x54, 0x76, 0x98,
 			 0x33, 0x03, 0x57, 0x18 , 0xb2 };
-	uint8_t plmn_id[] = { 0x09, 0x01, 0x99 };
+	uint8_t plmn_id[3];
+	osmo_plmn_to_bcd(plmn_id, &hnb->plmn);
 	RANAP_GlobalRNC_ID_t rnc_id = {
-		.rNC_ID = 23,
+		.rNC_ID = g_hnb->rnc_id,
 		.pLMNidentity.buf = plmn_id,
 		.pLMNidentity.size = sizeof(plmn_id),
 	};

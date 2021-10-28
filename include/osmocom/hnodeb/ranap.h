@@ -30,4 +30,4 @@ void hnb_rx_secmode_cmd(struct hnb *hnb, long ip_alg);
 void hnb_rua_dt_handle_ranap(struct hnb *hnb, struct ranap_message_s *ranap_msg);
 void hnb_rua_cl_handle_ranap(struct hnb *hnb, struct ranap_message_s *ranap_msg);
 void hnb_tx_iu_release_req(struct hnb *hnb);
-struct msgb *gen_initue_lu(int is_ps, uint32_t conn_id, const char *imsi);
+struct msgb *gen_initue_lu(const struct hnb *hnb, int is_ps, uint32_t conn_id, const char *imsi);

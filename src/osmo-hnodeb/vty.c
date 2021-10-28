@@ -354,7 +354,7 @@ DEFUN(chan, chan_cmd,
 	chan->conn_id = conn_id;
 	conn_id++;
 
-	msg = gen_initue_lu(chan->is_ps, chan->conn_id, chan->imsi);
+	msg = gen_initue_lu(g_hnb, chan->is_ps, chan->conn_id, chan->imsi);
 	rua = rua_new_conn(chan->is_ps, chan->conn_id, msg);
 
 	hnb_iuh_send(g_hnb, rua);
