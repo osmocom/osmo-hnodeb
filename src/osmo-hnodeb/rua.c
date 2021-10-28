@@ -36,7 +36,7 @@ int hnb_tx_dt(struct hnb *hnb, struct msgb *txm)
 
 	chan = hnb->cs.chan;
 	if (!chan) {
-		printf("hnb_nas_tx_tmsi_realloc_compl(): No CS channel established yet.\n");
+		LOGP(DRUA, LOGL_INFO, "hnb_nas_tx_tmsi_realloc_compl(): No CS channel established yet.\n");
 		return -1;
 	}
 
@@ -52,7 +52,7 @@ static void hnb_rua_dt_handle(struct hnb *hnb, ANY_t *in)
 
 	rc = rua_decode_directtransferies(&ies, in);
 	if (rc < 0) {
-		printf("failed to decode RUA DT IEs\n");
+		LOGP(DRUA, LOGL_INFO, "failed to decode RUA DT IEs\n");
 		return;
 	}
 
@@ -69,7 +69,7 @@ static void hnb_rua_cl_handle(struct hnb *hnb, ANY_t *in)
 
 	rc = rua_decode_connectionlesstransferies(&ies, in);
 	if (rc < 0) {
-		printf("failed to decode RUA CL IEs\n");
+		LOGP(DRUA, LOGL_INFO, "failed to decode RUA CL IEs\n");
 		return;
 	}
 
@@ -94,45 +94,45 @@ int hnb_rua_rx(struct hnb *hnb, struct msgb *msg)
 
 	switch (pdu->present) {
 	case RUA_RUA_PDU_PR_successfulOutcome:
-		printf("RUA_RUA_PDU_PR_successfulOutcome\n");
+		LOGP(DRUA, LOGL_INFO, "RUA_RUA_PDU_PR_successfulOutcome\n");
 		break;
 	case RUA_RUA_PDU_PR_initiatingMessage:
-		printf("RUA_RUA_PDU_PR_initiatingMessage\n");
+		LOGP(DRUA, LOGL_INFO, "RUA_RUA_PDU_PR_initiatingMessage\n");
 		break;
 	case RUA_RUA_PDU_PR_NOTHING:
-		printf("RUA_RUA_PDU_PR_NOTHING\n");
+		LOGP(DRUA, LOGL_INFO, "RUA_RUA_PDU_PR_NOTHING\n");
 		break;
 	case RUA_RUA_PDU_PR_unsuccessfulOutcome:
-		printf("RUA_RUA_PDU_PR_unsuccessfulOutcome\n");
+		LOGP(DRUA, LOGL_INFO, "RUA_RUA_PDU_PR_unsuccessfulOutcome\n");
 		break;
 	default:
-		printf("Unexpected RUA message received\n");
+		LOGP(DRUA, LOGL_INFO, "Unexpected RUA message received\n");
 		break;
 	}
 
 	switch (pdu->choice.successfulOutcome.procedureCode) {
 	case RUA_ProcedureCode_id_ConnectionlessTransfer:
-		printf("RUA rx Connectionless Transfer\n");
+		LOGP(DRUA, LOGL_INFO, "RUA rx Connectionless Transfer\n");
 		hnb_rua_cl_handle(hnb, &pdu->choice.successfulOutcome.value);
 		break;
 	case RUA_ProcedureCode_id_Connect:
-		printf("RUA rx Connect\n");
+		LOGP(DRUA, LOGL_INFO, "RUA rx Connect\n");
 		break;
 	case RUA_ProcedureCode_id_DirectTransfer:
-		printf("RUA rx DirectTransfer\n");
+		LOGP(DRUA, LOGL_INFO, "RUA rx DirectTransfer\n");
 		hnb_rua_dt_handle(hnb, &pdu->choice.successfulOutcome.value);
 		break;
 	case RUA_ProcedureCode_id_Disconnect:
-		printf("RUA rx Disconnect\n");
+		LOGP(DRUA, LOGL_INFO, "RUA rx Disconnect\n");
 		break;
 	case RUA_ProcedureCode_id_ErrorIndication:
-		printf("RUA rx ErrorIndication\n");
+		LOGP(DRUA, LOGL_INFO, "RUA rx ErrorIndication\n");
 		break;
 	case RUA_ProcedureCode_id_privateMessage:
-		printf("RUA rx privateMessage\n");
+		LOGP(DRUA, LOGL_INFO, "RUA rx privateMessage\n");
 		break;
 	default:
-		printf("RUA rx unknown message\n");
+		LOGP(DRUA, LOGL_INFO, "RUA rx unknown message\n");
 		break;
 	}
 

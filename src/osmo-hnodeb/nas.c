@@ -87,7 +87,7 @@ static struct tlv_parsed *parse_mm(struct gsm48_hdr *gh, int len)
 	parse_res = tlv_parse(&tp, &gsm48_mm_att_tlvdef, &gh->data[0], len, 0, 0);
 	if (parse_res <= 0) {
 		uint8_t msg_type = gsm48_hdr_msg_type(gh);
-		printf("Error parsing MM message 0x%hhx: %d\n", msg_type, parse_res);
+		LOGP(DNAS, LOGL_ERROR, "Error parsing MM message 0x%hhx: %d\n", msg_type, parse_res);
 		return NULL;
 	}
 
@@ -96,14 +96,14 @@ static struct tlv_parsed *parse_mm(struct gsm48_hdr *gh, int len)
 
 int hnb_nas_rx_lu_accept(struct gsm48_hdr *gh, int len, int *sent_tmsi)
 {
-	printf(" :D Location Update Accept :D\n");
+	LOGP(DNAS, LOGL_INFO, " :D Location Update Accept :D\n");
 	struct gsm48_loc_area_id *lai;
 
 	lai = (struct gsm48_loc_area_id *)&gh->data[0];
 
 	struct osmo_location_area_id laid;
 	gsm48_decode_lai2(lai, &laid);
-	printf("LU: mcc %s  mnc %s  lac %hd\n",
+	LOGP(DNAS, LOGL_INFO, "LU: mcc %s  mnc %s  lac %hd\n",
 	       osmo_mcc_name(laid.plmn.mcc), osmo_mnc_name(laid.plmn.mnc, laid.plmn.mnc_3_digits),
 	       laid.lac);
 
@@ -113,7 +113,7 @@ int hnb_nas_rx_lu_accept(struct gsm48_hdr *gh, int len, int *sent_tmsi)
 	len -= (const char *)&gh->data[0] - (const char *)gh;
 	parse_res = tlv_parse(&tp, &gsm48_mm_att_tlvdef, &gh->data[0], len, 0, 0);
 	if (parse_res <= 0) {
-		printf("Error parsing Location Update Accept message: %d\n", parse_res);
+		LOGP(DNAS, LOGL_ERROR, "Error parsing Location Update Accept message: %d\n", parse_res);
 		return -1;
 	}
 
@@ -128,7 +128,7 @@ int hnb_nas_rx_lu_accept(struct gsm48_hdr *gh, int len, int *sent_tmsi)
 
 void hnb_nas_rx_mm_info(struct gsm48_hdr *gh, int len)
 {
-	printf(" :) MM Info :)\n");
+	LOGP(DNAS, LOGL_INFO, " :) MM Info :)\n");
 	struct tlv_parsed *tp = parse_mm(gh, len);
 	if (!tp)
 		return;
@@ -138,7 +138,7 @@ void hnb_nas_rx_mm_info(struct gsm48_hdr *gh, int len)
 		gsm_7bit_decode_n(name, 127,
 				  TLVP_VAL(tp, GSM48_IE_NAME_SHORT)+1,
 				  (TLVP_LEN(tp, GSM48_IE_NAME_SHORT)-1)*8/7);
-		printf("Info: Short Network Name: %s\n", name);
+		LOGP(DNAS, LOGL_INFO, "Info: Short Network Name: %s\n", name);
 	}
 
 	if (TLVP_PRESENT(tp, GSM48_IE_NAME_LONG)) {
@@ -146,7 +146,7 @@ void hnb_nas_rx_mm_info(struct gsm48_hdr *gh, int len)
 		gsm_7bit_decode_n(name, 127,
 				  TLVP_VAL(tp, GSM48_IE_NAME_LONG)+1,
 				  (TLVP_LEN(tp, GSM48_IE_NAME_LONG)-1)*8/7);
-		printf("Info: Long Network Name: %s\n", name);
+		LOGP(DNAS, LOGL_INFO, "Info: Long Network Name: %s\n", name);
 	}
 }
 
@@ -158,11 +158,11 @@ static int hnb_nas_rx_auth_req(struct hnb *hnb, struct gsm48_hdr *gh,
 	len -= (const char *)&gh->data[0] - (const char *)gh;
 
 	if (len < sizeof(*ar)) {
-		printf("GSM48 Auth Req does not fit.\n");
+		LOGP(DNAS, LOGL_ERROR, "GSM48 Auth Req does not fit.\n");
 		return -1;
 	}
 
-	printf(" :) Authentication Request :)\n");
+	LOGP(DNAS, LOGL_INFO, " :) Authentication Request :)\n");
 
 	ar = (struct gsm48_auth_req*) &gh->data[0];
 	int seq = ar->key_seq;
@@ -183,9 +183,9 @@ static int hnb_nas_rx_auth_req(struct hnb *hnb, struct gsm48_hdr *gh,
 	memset(&vec, 0, sizeof(vec));
 	osmo_auth_gen_vec(&vec, &auth, ar->rand);
 
-	printf("seq %d rand %s",
+	LOGP(DNAS, LOGL_DEBUG, "seq %d rand %s",
 	       seq, osmo_hexdump(ar->rand, sizeof(ar->rand)));
-	printf(" --> sres %s\n",
+	LOGP(DNAS, LOGL_DEBUG, " --> sres %s\n",
 	       osmo_hexdump(vec.sres, 4));
 
 	return hnb_tx_dt(hnb, gen_nas_auth_resp(vec.sres));
@@ -197,7 +197,7 @@ static int hnb_nas_rx_mm(struct hnb *hnb, struct gsm48_hdr *gh, int len)
 
 	chan = hnb->cs.chan;
 	if (!chan) {
-		printf("hnb_nas_rx_mm(): No CS channel established yet.\n");
+		LOGP(DNAS, LOGL_ERROR, "hnb_nas_rx_mm(): No CS channel established yet.\n");
 		return -1;
 	}
 
@@ -219,7 +219,7 @@ static int hnb_nas_rx_mm(struct hnb *hnb, struct gsm48_hdr *gh, int len)
 			return 0;
 
 	case GSM48_MT_MM_LOC_UPD_REJECT:
-		printf("Received Location Update Reject\n");
+		LOGP(DNAS, LOGL_INFO, "Received Location Update Reject\n");
 		return 0;
 
 	case GSM48_MT_MM_INFO:
@@ -231,7 +231,7 @@ static int hnb_nas_rx_mm(struct hnb *hnb, struct gsm48_hdr *gh, int len)
 		return hnb_nas_rx_auth_req(hnb, gh, len);
 
 	default:
-		printf("04.08 message type not handled by hnb-test: 0x%x\n",
+		LOGP(DNAS, LOGL_INFO, "04.08 message type not handled by hnb-test: 0x%x\n",
 		       msg_type);
 		return 0;
 	}
@@ -241,14 +241,14 @@ static int hnb_nas_rx_mm(struct hnb *hnb, struct gsm48_hdr *gh, int len)
 void hnb_nas_rx_dtap(struct hnb *hnb, void *data, int len)
 {
 	int rc;
-	printf("got %d bytes: %s\n", len, osmo_hexdump(data, len));
+	LOGP(DNAS, LOGL_INFO, "got %d bytes: %s\n", len, osmo_hexdump(data, len));
 
 	// nas_pdu == '05 08 12' ==> IMEI Identity request
 	//            '05 04 0d' ==> LU reject
 
 	struct gsm48_hdr *gh = data;
 	if (len < sizeof(*gh)) {
-		printf("hnb_nas_rx_dtap(): NAS PDU is too short: %d. Ignoring.\n",
+		LOGP(DNAS, LOGL_ERROR, "hnb_nas_rx_dtap(): NAS PDU is too short: %d. Ignoring.\n",
 		       len);
 		return;
 	}
@@ -258,10 +258,10 @@ void hnb_nas_rx_dtap(struct hnb *hnb, void *data, int len)
 	case GSM48_PDISC_MM:
 		rc = hnb_nas_rx_mm(hnb, gh, len);
 		if (rc != 0)
-			printf("Error receiving MM message: %d\n", rc);
+			LOGP(DNAS, LOGL_ERROR, "Error receiving MM message: %d\n", rc);
 		return;
 	default:
-		printf("04.08 discriminator not handled by hnb-test: %d\n",
+		LOGP(DNAS, LOGL_NOTICE, "04.08 discriminator not handled by hnb-test: %d\n",
 		       pdisc);
 		return;
 	}

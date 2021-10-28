@@ -31,6 +31,7 @@ enum {
 	DHNBAP,
 	DRUA,
 	DRANAP,
+	DNAS,
 };
 extern const struct log_info hnb_log_info;
 

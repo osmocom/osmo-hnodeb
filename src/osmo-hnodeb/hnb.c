@@ -89,11 +89,11 @@ static int hnb_iuh_read_cb(struct osmo_fd *fd)
 
 	switch (sinfo.sinfo_ppid) {
 	case IUH_PPI_HNBAP:
-		printf("HNBAP message received\n");
+		LOGP(DHNBAP, LOGL_INFO, "HNBAP message received\n");
 		rc = hnb_hnbap_rx(hnb, msg);
 		break;
 	case IUH_PPI_RUA:
-		printf("RUA message received\n");
+		LOGP(DRUA, LOGL_INFO, "RUA message received\n");
 		rc = hnb_rua_rx(hnb, msg);
 		break;
 	case IUH_PPI_SABP:
@@ -123,7 +123,7 @@ static int hnb_iuh_write_cb(struct osmo_fd *fd, struct msgb *msg)
 	};
 	int rc;
 
-	printf("Sending: %s\n", osmo_hexdump(msgb_data(msg), msgb_length(msg)));
+	LOGP(DMAIN, LOGL_DEBUG, "Sending: %s\n", osmo_hexdump(msgb_data(msg), msgb_length(msg)));
 	rc = sctp_send(fd->fd, msgb_data(msg), msgb_length(msg),
 			&sinfo, 0);
 	/* we don't need to msgb_free(), write_queue does this for us */

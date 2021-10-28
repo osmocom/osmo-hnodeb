@@ -23,24 +23,29 @@
 
 static const struct log_info_cat log_cat[] = {
 	[DMAIN] = {
-		.name = "DMAIN", .loglevel = LOGL_INFO, .enabled = 1,
+		.name = "DMAIN", .loglevel = LOGL_NOTICE, .enabled = 1,
 		.color = "",
 		.description = "Main program",
 	},
 	[DHNBAP] = {
-		.name = "DHNBAP", .loglevel = LOGL_DEBUG, .enabled = 1,
-		.color = "",
+		.name = "DHNBAP", .loglevel = LOGL_NOTICE, .enabled = 1,
+		.color = "\033[1;33m",
 		.description = "Home Node B Application Part",
 	},
 	[DRANAP] = {
-		.name = "RANAP", .loglevel = LOGL_DEBUG, .enabled = 1,
-		.color = "",
+		.name = "RANAP", .loglevel = LOGL_NOTICE, .enabled = 1,
+		.color = "\033[1;34m",
 		.description = "RAN Application Part",
 	},
 	[DRUA] = {
-		.name = "RUA", .loglevel = LOGL_DEBUG, .enabled = 1,
-		.color = "",
+		.name = "RUA", .loglevel = LOGL_NOTICE, .enabled = 1,
+		.color = "\033[1;35m",
 		.description = "RANAP User Adaptation",
+	},
+	[DNAS] = {
+		.name = "NAS", .loglevel = LOGL_NOTICE, .enabled = 1,
+		.color = "\033[1;32m",
+		.description = "Non-Access Stratum",
 	},
 };
 

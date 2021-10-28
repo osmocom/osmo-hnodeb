@@ -35,7 +35,7 @@ static const char *printstr(OCTET_STRING_t *s)
 }
 
 #define PP(octet_string_t) \
-	printf(#octet_string_t " = %s\n",\
+	LOGP(DRANAP, LOGL_INFO, #octet_string_t " = %s\n",\
 	       printstr(&octet_string_t))
 
 void hnb_rua_dt_handle_ranap(struct hnb *hnb,
@@ -46,12 +46,12 @@ void hnb_rua_dt_handle_ranap(struct hnb *hnb,
 	RANAP_PermittedIntegrityProtectionAlgorithms_t *algs;
 	RANAP_IntegrityProtectionAlgorithm_t *first_alg;
 
-	printf("rx ranap_msg->procedureCode %d\n",
+	LOGP(DRANAP, LOGL_INFO, "rx ranap_msg->procedureCode %d\n",
 	       ranap_msg->procedureCode);
 
 	switch (ranap_msg->procedureCode) {
 	case RANAP_ProcedureCode_id_DirectTransfer:
-		printf("rx DirectTransfer: presence = %hx\n",
+		LOGP(DRANAP, LOGL_INFO, "rx DirectTransfer: presence = %hx\n",
 		       ranap_msg->msg.directTransferIEs.presenceMask);
 		PP(ranap_msg->msg.directTransferIEs.nas_pdu);
 
@@ -62,14 +62,14 @@ void hnb_rua_dt_handle_ranap(struct hnb *hnb,
 		return;
 
 	case RANAP_ProcedureCode_id_SecurityModeControl:
-		printf("rx SecurityModeControl: presence = %hx\n",
+		LOGP(DRANAP, LOGL_INFO, "rx SecurityModeControl: presence = %hx\n",
 		       ranap_msg->msg.securityModeCommandIEs.presenceMask);
 
 		/* Just pick the first available IP alg, don't care about
 		 * encryption (yet?) */
 		algs = &ranap_msg->msg.securityModeCommandIEs.integrityProtectionInformation.permittedAlgorithms;
 		if (algs->list.count < 1) {
-			printf("Security Mode Command: No permitted algorithms.\n");
+			LOGP(DRANAP, LOGL_INFO, "Security Mode Command: No permitted algorithms.\n");
 			return;
 		}
 		first_alg = *algs->list.array;
@@ -88,7 +88,7 @@ void hnb_rua_cl_handle_ranap(struct hnb *hnb,
 {
 	char imsi[16];
 
-	printf("rx ranap_msg->procedureCode %d\n",
+	LOGP(DRANAP, LOGL_INFO, "rx ranap_msg->procedureCode %d\n",
 	       ranap_msg->procedureCode);
 
 	switch (ranap_msg->procedureCode) {
@@ -99,7 +99,7 @@ void hnb_rua_cl_handle_ranap(struct hnb *hnb,
 					 ranap_msg->msg.pagingIEs.permanentNAS_UE_ID.choice.iMSI.size);
 		} else imsi[0] = '\0';
 
-		printf("rx Paging: presence=%hx  domain=%ld  IMSI=%s\n",
+		LOGP(DRANAP, LOGL_INFO, "rx Paging: presence=%hx  domain=%ld  IMSI=%s\n",
 		       ranap_msg->msg.pagingIEs.presenceMask,
 		       ranap_msg->msg.pagingIEs.cN_DomainIndicator,
 		       imsi
@@ -158,7 +158,7 @@ void hnb_tx_iu_release_compl(struct hnb *hnb)
 
 void hnb_rx_secmode_cmd(struct hnb *hnb, long ip_alg)
 {
-	printf(" :) Security Mode Command :)\n");
+	LOGP(DRANAP, LOGL_INFO, " :) Security Mode Command :)\n");
 	/* not caring about encryption yet, just pass 0 for No Encryption. */
 	hnb_tx_dt(hnb, ranap_new_msg_sec_mod_compl(ip_alg, 0));
 }
@@ -170,6 +170,6 @@ void hnb_rx_iu_release(struct hnb *hnb)
 
 void hnb_rx_paging(struct hnb *hnb, const char *imsi)
 {
-	printf(" :) Paging Request for %s :)\n", imsi);
+	LOGP(DRANAP, LOGL_INFO, " :) Paging Request for %s :)\n", imsi);
 	/* TODO reply */
 }

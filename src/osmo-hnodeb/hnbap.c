@@ -43,7 +43,7 @@ static int hnb_rx_hnb_register_acc(struct hnb *hnb, ANY_t *in)
 	}
 
 	hnb->rnc_id = accept.rnc_id;
-	printf("HNB Register accept with RNC ID %u\n", hnb->rnc_id);
+	LOGP(DHNBAP, LOGL_INFO, "HNB Register accept with RNC ID %u\n", hnb->rnc_id);
 
 	hnbap_free_hnbregisteraccepties(&accept);
 	return 0;
@@ -62,7 +62,7 @@ static int hnb_rx_ue_register_acc(struct hnb *hnb, ANY_t *in)
 	}
 
 	if (accept.uE_Identity.present != HNBAP_UE_Identity_PR_iMSI) {
-		printf("Wrong type in UE register accept\n");
+		LOGP(DHNBAP, LOGL_ERROR, "Wrong type in UE register accept\n");
 		return -1;
 	}
 
@@ -70,7 +70,7 @@ static int hnb_rx_ue_register_acc(struct hnb *hnb, ANY_t *in)
 
 	ranap_bcd_decode(imsi, sizeof(imsi), accept.uE_Identity.choice.iMSI.buf,
 			accept.uE_Identity.choice.iMSI.size);
-	printf("UE Register accept for IMSI %s, context %u\n", imsi, ctx_id);
+	LOGP(DHNBAP, LOGL_INFO, "UE Register accept for IMSI %s, context %u\n", imsi, ctx_id);
 
 	hnb->ctx_id = ctx_id;
 	hnbap_free_ueregisteraccepties(&accept);
@@ -93,7 +93,7 @@ int hnb_hnbap_rx(struct hnb *hnb, struct msgb *msg)
 	}
 
 	if (pdu->present != HNBAP_HNBAP_PDU_PR_successfulOutcome) {
-		printf("Unexpected HNBAP message received\n");
+		LOGP(DHNBAP, LOGL_ERROR, "Unexpected HNBAP message received\n");
 	}
 
 	switch (pdu->choice.successfulOutcome.procedureCode) {
@@ -183,7 +183,7 @@ void hnb_send_register_req(struct hnb *hnb)
 	memset(&request_out, 0, sizeof(request_out));
 	rc = hnbap_encode_hnbregisterrequesties(&request_out, &request);
 	if (rc < 0) {
-		printf("Could not encode HNB register request IEs\n");
+		LOGP(DHNBAP, LOGL_ERROR, "Could not encode HNB register request IEs\n");
 	}
 
 	msg = hnbap_generate_initiating_message(HNBAP_ProcedureCode_id_HNBRegister,
@@ -212,7 +212,7 @@ void hnb_send_deregister_req(struct hnb *hnb)
 	memset(&request_out, 0, sizeof(request_out));
 	rc = hnbap_encode_hnbde_registeries(&request_out, &request);
 	if (rc < 0) {
-		printf("Could not encode HNB deregister request IEs\n");
+		LOGP(DHNBAP, LOGL_ERROR, "Could not encode HNB deregister request IEs\n");
 	}
 
 	msg = hnbap_generate_initiating_message(HNBAP_ProcedureCode_id_HNBDe_Register,
