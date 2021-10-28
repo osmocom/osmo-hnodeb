@@ -56,6 +56,10 @@ struct hnb_chan {
 
 struct hnb {
 	struct osmo_plmn_id plmn;
+	uint16_t cell_identity;
+	uint16_t lac;
+	uint8_t rac;
+	uint16_t sac;
 	struct {
 		char *local_addr;
 		uint16_t local_port;

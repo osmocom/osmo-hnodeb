@@ -27,6 +27,8 @@
 #include <osmocom/vty/command.h>
 #include <osmocom/core/msgb.h>
 
+#include <osmocom/gsm/protocol/gsm_04_08.h>
+
 #include <osmocom/rua/rua_msg_factory.h>
 
 #include <osmocom/ranap/ranap_common.h>
@@ -127,6 +129,57 @@ DEFUN_USRATTR(cfg_hnodeb_mnc,
 	return CMD_SUCCESS;
 }
 
+DEFUN_USRATTR(cfg_hnodeb_ci,
+	      cfg_hnodeb_ci_cmd,
+	      0,
+	      "cell_identity <0-65535>",
+	      "Set the Cell identity of this HnodeB\n" "Cell Identity\n")
+{
+	struct hnb *hnb = (struct hnb *)vty->index;
+	hnb->cell_identity = atoi(argv[0]);
+	return CMD_SUCCESS;
+}
+
+DEFUN_USRATTR(cfg_hnodeb_lac,
+	      cfg_hnodeb_lac_cmd,
+	      0,
+	      "location_area_code <0-65535>",
+	      "Set the Location Area Code (LAC) of this HnodeB\n" "LAC\n")
+{
+	struct hnb *hnb = (struct hnb *)vty->index;
+	int lac = atoi(argv[0]);
+
+	if (lac == GSM_LAC_RESERVED_DETACHED || lac == GSM_LAC_RESERVED_ALL_BTS) {
+		vty_out(vty, "%% LAC %d is reserved by GSM 04.08%s",
+			lac, VTY_NEWLINE);
+		return CMD_WARNING;
+	}
+	hnb->lac = lac;
+	return CMD_SUCCESS;
+}
+
+DEFUN_USRATTR(cfg_hnodeb_rac,
+	      cfg_hnodeb_rac_cmd,
+	      0,
+	      "routing_area_code <0-255>",
+	      "Set the Routing Area Code (RAC) of this HnodeB\n" "RAC\n")
+{
+	struct hnb *hnb = (struct hnb *)vty->index;
+	hnb->rac = atoi(argv[0]);
+	return CMD_SUCCESS;
+}
+
+DEFUN_USRATTR(cfg_hnodeb_sac,
+	      cfg_hnodeb_sac_cmd,
+	      0,
+	      "service_area_code <0-255>",
+	      "Set the Service Area Code (RAC) of this HnodeB\n" "SAC\n")
+{
+	struct hnb *hnb = (struct hnb *)vty->index;
+	hnb->sac = atoi(argv[0]);
+	return CMD_SUCCESS;
+}
+
 static struct cmd_node iuh_node = {
 	IUH_NODE,
 	"%s(config-iuh)# ",
@@ -189,6 +242,10 @@ static int config_write_hnodeb(struct vty *vty)
 	vty_out(vty, " network country code %s%s", osmo_mcc_name(g_hnb->plmn.mcc), VTY_NEWLINE);
 	vty_out(vty, " mobile network code %s%s",
 		osmo_mnc_name(g_hnb->plmn.mnc, g_hnb->plmn.mnc_3_digits), VTY_NEWLINE);
+	vty_out(vty, " cell_identity %u%s", g_hnb->cell_identity, VTY_NEWLINE);
+	vty_out(vty, " location_area_code %u%s", g_hnb->lac, VTY_NEWLINE);
+	vty_out(vty, " routing_area_code %u%s", g_hnb->rac, VTY_NEWLINE);
+	vty_out(vty, " service_area_code %u%s", g_hnb->sac, VTY_NEWLINE);
 	vty_out(vty, " iuh%s", VTY_NEWLINE);
 	if (g_hnb->iuh.local_addr)
 		vty_out(vty, "  local-ip %s%s", g_hnb->iuh.local_addr, VTY_NEWLINE);
@@ -306,6 +363,10 @@ void hnb_vty_init(void)
 	install_node(&hnodeb_node, config_write_hnodeb);
 	install_element(HNODEB_NODE, &cfg_hnodeb_ncc_cmd);
 	install_element(HNODEB_NODE, &cfg_hnodeb_mnc_cmd);
+	install_element(HNODEB_NODE, &cfg_hnodeb_ci_cmd);
+	install_element(HNODEB_NODE, &cfg_hnodeb_lac_cmd);
+	install_element(HNODEB_NODE, &cfg_hnodeb_rac_cmd);
+	install_element(HNODEB_NODE, &cfg_hnodeb_sac_cmd);
 	install_element(HNODEB_NODE, &cfg_hnodeb_iuh_cmd);
 	install_node(&iuh_node, NULL);
 	install_element(IUH_NODE, &cfg_hnodeb_iuh_local_ip_cmd);
