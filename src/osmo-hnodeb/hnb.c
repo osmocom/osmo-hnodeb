@@ -54,19 +54,20 @@ static int hnb_iuh_read_cb(struct osmo_stream_cli *conn)
 		LOGP(DMAIN, LOGL_ERROR, "Error during sctp_recvmsg()\n");
 		/* FIXME: clean up after disappeared HNB */
 		osmo_stream_cli_close(conn);
-		return rc;
+		goto free_ret;
 	} else if (rc == 0) {
 		LOGP(DMAIN, LOGL_INFO, "Connection to HNB closed\n");
 		osmo_stream_cli_close(conn);
-		return -1;
+		rc = -1;
+		goto free_ret;
 	} else {
 		msgb_put(msg, rc);
 	}
 
 	if (flags & MSG_NOTIFICATION) {
 		LOGP(DMAIN, LOGL_DEBUG, "Ignoring SCTP notification\n");
-		msgb_free(msg);
-		return 0;
+		rc = 0;
+		goto free_ret;
 	}
 
 	sinfo.sinfo_ppid = ntohl(sinfo.sinfo_ppid);
@@ -94,6 +95,7 @@ static int hnb_iuh_read_cb(struct osmo_stream_cli *conn)
 		break;
 	}
 
+free_ret:
 	msgb_free(msg);
 	return rc;
 }
