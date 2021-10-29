@@ -38,9 +38,9 @@ static const char *printstr(OCTET_STRING_t *s)
 	LOGP(DRANAP, LOGL_INFO, #octet_string_t " = %s\n",\
 	       printstr(&octet_string_t))
 
-void hnb_rua_dt_handle_ranap(struct hnb *hnb,
-				  struct ranap_message_s *ranap_msg)
+void hnb_rua_dt_handle_ranap(void *ctx, struct ranap_message_s *ranap_msg)
 {
+	struct hnb *hnb = (struct hnb *)ctx;
 	int len;
 	uint8_t *data;
 	RANAP_PermittedIntegrityProtectionAlgorithms_t *algs;
@@ -83,9 +83,9 @@ void hnb_rua_dt_handle_ranap(struct hnb *hnb,
 	}
 }
 
-void hnb_rua_cl_handle_ranap(struct hnb *hnb,
-				  struct ranap_message_s *ranap_msg)
+void hnb_rua_cl_handle_ranap(void *ctx, struct ranap_message_s *ranap_msg)
 {
+	struct hnb *hnb = (struct hnb *)ctx;
 	char imsi[16];
 
 	LOGP(DRANAP, LOGL_INFO, "rx ranap_msg->procedureCode %d\n",
