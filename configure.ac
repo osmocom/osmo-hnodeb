@@ -44,6 +44,16 @@ m4_ifdef([AX_CHECK_COMPILE_FLAG], [], [
 dnl checks for libraries
 AC_SEARCH_LIBS([dlopen], [dl dld], [LIBRARY_DL="$LIBS";LIBS=""])
 AC_SUBST(LIBRARY_DL)
+old_LIBS=$LIBS
+AC_SEARCH_LIBS([sctp_recvmsg], [sctp], [
+	AC_DEFINE(HAVE_LIBSCTP, 1, [Define 1 to enable SCTP support])
+	AC_SUBST(HAVE_LIBSCTP, [1])
+	if test -n "$ac_lib"; then
+		AC_SUBST(LIBSCTP_LIBS, [-l$ac_lib])
+	fi
+	], [
+	AC_MSG_ERROR([sctp_recvmsg not found in searched libs])])
+LIBS=$old_LIBS
 
 PKG_CHECK_MODULES(LIBOSMOCORE, libosmocore >= 1.5.0)
 PKG_CHECK_MODULES(LIBOSMOVTY, libosmovty >= 1.5.0)
