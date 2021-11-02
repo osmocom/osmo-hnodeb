@@ -1,0 +1,6 @@
+osmo-hnodeb (0.0.0) unstable; urgency=medium
+
+  * Initial debian package
+
+ -- Harald Welte <laforge@osmocom.org>  Mon, 01 Nov 2021 16:13:40 +0200
+
