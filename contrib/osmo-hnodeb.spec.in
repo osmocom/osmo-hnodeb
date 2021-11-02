@@ -24,8 +24,10 @@ License:        AGPL-3.0-or-later AND GPL-2.0-or-later
 Group:          Hardware/Mobile
 URL:            https://osmocom.org/projects/osmohnodeb
 Source:         %{name}-%{version}.tar.xz
+BuildRequires:  autoconf-archive
 BuildRequires:  automake >= 1.9
 BuildRequires:  libtool >= 2
+BuildRequires:  lksctp-tools-devel
 BuildRequires:  pkgconfig >= 0.20
 %if 0%{?suse_version}
 BuildRequires:  systemd-rpm-macros
@@ -39,7 +41,11 @@ BuildRequires:  pkgconfig(libosmoctrl) >= 1.5.0
 BuildRequires:  pkgconfig(libosmogb) >= 1.5.0
 BuildRequires:  pkgconfig(libosmogsm) >= 1.5.0
 BuildRequires:  pkgconfig(libosmovty) >= 1.5.0
+BuildRequires:  pkgconfig(libosmo-hnbap) >= 0.7.0
+BuildRequires:  pkgconfig(libosmo-ranap) >= 0.7.0
+BuildRequires:  pkgconfig(libosmo-rua) >= 0.7.0
 BuildRequires:  pkgconfig(talloc)
+BuildRequires:  pkgconfig(libasn1c) >= 0.9.30
 %{?systemd_requires}
 
 %description
