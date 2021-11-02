@@ -45,6 +45,8 @@ osmo-hnodeb-*.tar.gz
 tags
 /deps
 
+src/osmo-hnodeb/osmo-hnodeb
+
 #tests
 tests/testsuite.dir
 tests/*/*_test
