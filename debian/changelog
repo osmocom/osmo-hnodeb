@@ -1,3 +1,36 @@
+osmo-hnodeb (0.0.1) unstable; urgency=medium
+
+  [ Pau Espin Pedrol ]
+  * configure: link against libsctp
+  * Import hnb-test from osmo-iuh.git
+  * Move existing vty code to its own vty.c/h file
+  * main.c: Drop commented out code
+  * Move rua related code to rua.c/h
+  * Move hnbap related code to hnbap.c/h
+  * Allocate g_hnb as a pointer, move code to hnb.c/h
+  * Move protocol related code in main.c to related proto files
+  * main.c: Fix cap in naming for vty_info.name
+  * More work on main.c to add osmocom functionalitites
+  * Set up Iuh conn params through VTY
+  * Drop unused fields in struct hnb
+  * hnb: Move wqueue to .iuh, add wrapper to use it
+  * Use osmocom logging in non-main files
+  * use osmo_stream_cli to manage sctp Iuh conn
+  * Send HnbRegisterRequest when HnodeB connects on Iuh
+  * Configure PLMN over VTY and use it in HnbRegisterRequest
+  * Configure CI,LAC,RAC,SAC over VTY and use it in HnbRegisterRequest
+  * Configure HNB-Identity over VTY and use it in HnbRegisterRequest
+  * Generate proper rnc_id and plmn in LuRequest
+  * hnb.c: Fix memleak in hnb_iuh_read_cb
+  * ranap: Fix compiler warnings passing func callback
+
+  [ Oliver Smith ]
+  * d/control, spec: add missing builddeps
+  * rpm spec: fix invalid file paths
+  * gitignore: add src/osmo-hnodeb/osmo-hnodeb
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Tue, 16 Nov 2021 18:29:42 +0100
+
 osmo-hnodeb (0.0.0) unstable; urgency=medium
 
   * Initial debian package
