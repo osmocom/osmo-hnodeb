@@ -33,6 +33,7 @@
 #include <osmocom/hnodeb/hnbap.h>
 #include <osmocom/hnodeb/hnodeb.h>
 #include <osmocom/hnodeb/iuh.h>
+#include <osmocom/hnodeb/hnb_shutdown_fsm.h>
 
 static int hnb_rx_hnb_register_acc(struct hnb *hnb, ANY_t *in)
 {
@@ -44,9 +45,28 @@ static int hnb_rx_hnb_register_acc(struct hnb *hnb, ANY_t *in)
 	}
 
 	hnb->rnc_id = accept.rnc_id;
-	LOGP(DHNBAP, LOGL_INFO, "HNB Register accept with RNC ID %u\n", hnb->rnc_id);
+	LOGP(DHNBAP, LOGL_INFO, "Rx HNB Register accept with RNC ID %u\n", hnb->rnc_id);
 
 	hnbap_free_hnbregisteraccepties(&accept);
+	return 0;
+}
+
+static int hnb_rx_hnb_register_rej(struct hnb *hnb, ANY_t *in)
+{
+	int rc;
+	HNBAP_HNBRegisterRejectIEs_t reject;
+
+	rc = hnbap_decode_hnbregisterrejecties(&reject, in);
+	if (rc < 0) {
+		LOGP(DHNBAP, LOGL_NOTICE, "Rx HNB Register Reject: parse failure\n");
+		return -EINVAL;
+	}
+
+	LOGP(DHNBAP, LOGL_NOTICE, "Rx HNB Register Reject with cause %s\n",
+	     hnbap_cause_str(&reject.cause));
+	hnbap_free_hnbregisterrejecties(&reject);
+
+	hnb_shutdown(hnb, "Rx HNB Register Reject", false);
 	return 0;
 }
 
@@ -79,6 +99,53 @@ static int hnb_rx_ue_register_acc(struct hnb *hnb, ANY_t *in)
 	return 0;
 }
 
+static int hnb_hnbap_rx_initiating(struct hnb *hnb, struct HNBAP_InitiatingMessage *init)
+{
+	int rc;
+
+	switch (init->procedureCode) {
+	default:
+		LOGP(DHNBAP, LOGL_ERROR, "Rx HNBAP initiatingMessage %ld unsupported\n", init->procedureCode);
+		rc = -ENOSPC;
+		break;
+	}
+	return rc;
+}
+
+static int hnb_hnbap_rx_successful(struct hnb *hnb, struct HNBAP_SuccessfulOutcome *succ)
+{
+	int rc;
+
+	switch (succ->procedureCode) {
+	case HNBAP_ProcedureCode_id_HNBRegister:
+		/* Get HNB id and send UE Register request */
+		rc = hnb_rx_hnb_register_acc(hnb, &succ->value);
+		break;
+	case HNBAP_ProcedureCode_id_UERegister:
+		rc = hnb_rx_ue_register_acc(hnb, &succ->value);
+		break;
+	default:
+		rc = -ENOSPC;
+		break;
+	}
+	return rc;
+}
+
+static int hnb_hnbap_rx_unsuccessful(struct hnb *hnb, struct HNBAP_UnsuccessfulOutcome *unsucc)
+{
+	int rc;
+
+	switch (unsucc->procedureCode) {
+	case HNBAP_ProcedureCode_id_HNBRegister:
+		rc = hnb_rx_hnb_register_rej(hnb, &unsucc->value);
+		break;
+	default:
+		rc = -ENOSPC;
+		break;
+	}
+	return rc;
+}
+
 int hnb_hnbap_rx(struct hnb *hnb, struct msgb *msg)
 {
 	HNBAP_HNBAP_PDU_t _pdu, *pdu = &_pdu;
@@ -93,21 +160,20 @@ int hnb_hnbap_rx(struct hnb *hnb, struct msgb *msg)
 		return -EINVAL;
 	}
 
-	if (pdu->present != HNBAP_HNBAP_PDU_PR_successfulOutcome) {
-		LOGP(DHNBAP, LOGL_ERROR, "Unexpected HNBAP message received\n");
-	}
-
-	switch (pdu->choice.successfulOutcome.procedureCode) {
-	case HNBAP_ProcedureCode_id_HNBRegister:
-		/* Get HNB id and send UE Register request */
-		rc = hnb_rx_hnb_register_acc(hnb, &pdu->choice.successfulOutcome.value);
+	switch (pdu->present) {
+	case HNBAP_HNBAP_PDU_PR_initiatingMessage:
+		rc = hnb_hnbap_rx_initiating(hnb, &pdu->choice.initiatingMessage);
 		break;
-	case HNBAP_ProcedureCode_id_UERegister:
-		rc = hnb_rx_ue_register_acc(hnb, &pdu->choice.successfulOutcome.value);
+	case HNBAP_HNBAP_PDU_PR_successfulOutcome:
+		rc = hnb_hnbap_rx_successful(hnb, &pdu->choice.successfulOutcome);
 		break;
+	case HNBAP_HNBAP_PDU_PR_unsuccessfulOutcome:
+		rc = hnb_hnbap_rx_unsuccessful(hnb, &pdu->choice.unsuccessfulOutcome);
+		break;
+	case HNBAP_HNBAP_PDU_PR_NOTHING: /* No components present */
 	default:
+		LOGP(DHNBAP, LOGL_ERROR, "Unexpected HNBAP message received\n");
 		rc = -ENOSPC;
-		break;
 	}
 
 	return rc;
