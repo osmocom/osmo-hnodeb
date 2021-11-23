@@ -52,12 +52,12 @@ static int hnb_iuh_read_cb(struct osmo_stream_cli *conn)
 	rc = sctp_recvmsg(fd->fd, msgb_data(msg), msgb_tailroom(msg),
 			  NULL, NULL, &sinfo, &flags);
 	if (rc < 0) {
-		LOGP(DMAIN, LOGL_ERROR, "Error during sctp_recvmsg()\n");
+		LOGP(DSCTP, LOGL_ERROR, "Error during sctp_recvmsg()\n");
 		/* FIXME: clean up after disappeared HNB */
 		osmo_stream_cli_close(conn);
 		goto free_ret;
 	} else if (rc == 0) {
-		LOGP(DMAIN, LOGL_INFO, "Connection to HNBGW closed\n");
+		LOGP(DSCTP, LOGL_INFO, "Connection to HNBGW closed\n");
 		osmo_stream_cli_close(conn);
 		rc = -1;
 		goto free_ret;
@@ -66,7 +66,7 @@ static int hnb_iuh_read_cb(struct osmo_stream_cli *conn)
 	}
 
 	if (flags & MSG_NOTIFICATION) {
-		LOGP(DMAIN, LOGL_DEBUG, "Ignoring SCTP notification\n");
+		LOGP(DSCTP, LOGL_DEBUG, "Ignoring SCTP notification\n");
 		rc = 0;
 		goto free_ret;
 	}
@@ -85,12 +85,12 @@ static int hnb_iuh_read_cb(struct osmo_stream_cli *conn)
 	case IUH_PPI_SABP:
 	case IUH_PPI_RNA:
 	case IUH_PPI_PUA:
-		LOGP(DMAIN, LOGL_ERROR, "Unimplemented SCTP PPID=%u received\n",
+		LOGP(DSCTP, LOGL_ERROR, "Unimplemented SCTP PPID=%u received\n",
 		     sinfo.sinfo_ppid);
 		rc = 0;
 		break;
 	default:
-		LOGP(DMAIN, LOGL_ERROR, "Unknown SCTP PPID=%u received\n",
+		LOGP(DSCTP, LOGL_ERROR, "Unknown SCTP PPID=%u received\n",
 		     sinfo.sinfo_ppid);
 		rc = 0;
 		break;
@@ -103,7 +103,7 @@ free_ret:
 
 static int hnb_iuh_connect_cb(struct osmo_stream_cli *conn)
 {
-	LOGP(DMAIN, LOGL_NOTICE, "Iuh connected to HNBGW\n");
+	LOGP(DSCTP, LOGL_NOTICE, "Iuh connected to HNBGW\n");
 	struct hnb *hnb = osmo_stream_cli_get_data(conn);
 
 	hnb_send_register_req(hnb);
@@ -142,7 +142,7 @@ int hnb_iuh_connect(struct hnb *hnb)
 {
 	int rc;
 
-	LOGP(DMAIN, LOGL_INFO, "Iuh Connect: %s[:%u] => %s[:%u]\n",
+	LOGP(DSCTP, LOGL_INFO, "Iuh Connect: %s[:%u] => %s[:%u]\n",
 	     hnb->iuh.local_addr, hnb->iuh.local_port, hnb->iuh.remote_addr, hnb->iuh.remote_port);
 
 	osmo_stream_cli_set_addrs(hnb->iuh.client, (const char **)&hnb->iuh.remote_addr, 1);
@@ -151,7 +151,7 @@ int hnb_iuh_connect(struct hnb *hnb)
 	osmo_stream_cli_set_local_port(hnb->iuh.client, hnb->iuh.local_port);
 	rc = osmo_stream_cli_open(hnb->iuh.client);
 	if (rc < 0) {
-		LOGP(DMAIN, LOGL_ERROR, "Unable to open stream client for Iuh %s[:%u] => %s[:%u]\n",
+		LOGP(DSCTP, LOGL_ERROR, "Unable to open stream client for Iuh %s[:%u] => %s[:%u]\n",
 		     hnb->iuh.local_addr, hnb->iuh.local_port, hnb->iuh.remote_addr, hnb->iuh.remote_port);
 		/* we don't return error in here because osmo_stream_cli_open()
 		   will continue to retry (due to timeout being explicitly set with

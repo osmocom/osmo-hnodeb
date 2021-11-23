@@ -42,6 +42,11 @@ static const struct log_info_cat log_cat[] = {
 		.color = "\033[1;35m",
 		.description = "RANAP User Adaptation",
 	},
+	[DSCTP] = {
+		.name = "DSCTP", .loglevel = LOGL_NOTICE, .enabled = 1,
+		.color = "\033[1;36m",
+		.description = "SCTP connection on the Iuh link",
+	},
 	[DNAS] = {
 		.name = "NAS", .loglevel = LOGL_NOTICE, .enabled = 1,
 		.color = "\033[1;32m",
