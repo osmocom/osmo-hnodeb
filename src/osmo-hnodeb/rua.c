@@ -28,6 +28,7 @@
 
 #include <osmocom/hnodeb/rua.h>
 #include <osmocom/hnodeb/ranap.h>
+#include <osmocom/hnodeb/iuh.h>
 
 int hnb_tx_dt(struct hnb *hnb, struct msgb *txm)
 {

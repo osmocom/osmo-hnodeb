@@ -34,6 +34,7 @@
 #include <osmocom/ranap/ranap_common.h>
 #include <osmocom/ranap/ranap_msg_factory.h>
 
+#include <osmocom/hnodeb/iuh.h>
 #include <osmocom/hnodeb/hnbap.h>
 #include <osmocom/hnodeb/ranap.h>
 #include <osmocom/hnodeb/vty.h>

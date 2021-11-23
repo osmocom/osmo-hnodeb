@@ -32,6 +32,7 @@
 
 #include <osmocom/hnodeb/hnbap.h>
 #include <osmocom/hnodeb/hnodeb.h>
+#include <osmocom/hnodeb/iuh.h>
 
 static int hnb_rx_hnb_register_acc(struct hnb *hnb, ANY_t *in)
 {

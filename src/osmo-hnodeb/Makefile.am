@@ -33,6 +33,7 @@ osmo_hnodeb_SOURCES = \
 	debug.c \
 	hnbap.c \
 	hnb.c \
+	iuh.c \
 	nas.c \
 	ranap.c \
 	rua.c \

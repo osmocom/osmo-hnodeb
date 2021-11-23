@@ -48,6 +48,7 @@
 #include <osmocom/hnodeb/ranap.h>
 #include <osmocom/hnodeb/vty.h>
 #include <osmocom/hnodeb/hnodeb.h>
+#include <osmocom/hnodeb/iuh.h>
 
 static const char * const osmohnodeb_copyright =
 	"OsmoHNodeB - Osmocom 3G Home NodeB implementation\r\n"
@@ -264,7 +265,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	rc = hnb_connect(g_hnb);
+	rc = hnb_iuh_connect(g_hnb);
 	if (rc < 0) {
 		perror("Error connecting to Iuh port");
 		exit(1);

@@ -17,37 +17,25 @@
  * along with this program.  If not, see <http://www.gnu.org/lienses/>.
  *
  */
+#pragma once
 
-#include "config.h"
+#include <osmocom/core/msgb.h>
 
-#include <osmocom/core/socket.h>
-#include <osmocom/core/talloc.h>
-#include <osmocom/netif/stream.h>
+/* 25.467 Section 7.1 */
+#define IUH_DEFAULT_SCTP_PORT	29169
+#define RNA_DEFAULT_SCTP_PORT	25471
 
-#include <osmocom/hnodeb/hnodeb.h>
-#include <osmocom/hnodeb/iuh.h>
+#define IUH_PPI_RUA		19
+#define IUH_PPI_HNBAP		20
+#define IUH_PPI_SABP		31
+#define IUH_PPI_RNA		42
+#define IUH_PPI_PUA		55
 
+#define IUH_MSGB_SIZE	2048
 
-struct hnb *hnb_alloc(void *tall_ctx)
-{
-	struct hnb *hnb;
+struct hnb;
 
-	hnb = talloc_zero(tall_ctx, struct hnb);
-	if (!hnb)
-		return NULL;
-
-	hnb->identity = talloc_strdup(hnb, "OsmoHNodeB");
-	hnb->plmn = (struct osmo_plmn_id){
-		.mcc = 1,
-		.mnc = 1,
-	};
-	hnb_iuh_alloc(hnb);
-
-	return hnb;
-}
-
-void hnb_free(struct hnb *hnb)
-{
-	hnb_iuh_free(hnb);
-	talloc_free(hnb);
-}
+void hnb_iuh_alloc(struct hnb *hnb);
+void hnb_iuh_free(struct hnb *hnb);
+int hnb_iuh_connect(struct hnb *hnb);
+int hnb_iuh_send(struct hnb *hnb, struct msgb *msg);

@@ -36,18 +36,6 @@ enum {
 };
 extern const struct log_info hnb_log_info;
 
-/* 25.467 Section 7.1 */
-#define IUH_DEFAULT_SCTP_PORT	29169
-#define RNA_DEFAULT_SCTP_PORT	25471
-
-#define IUH_PPI_RUA		19
-#define IUH_PPI_HNBAP		20
-#define IUH_PPI_SABP		31
-#define IUH_PPI_RNA		42
-#define IUH_PPI_PUA		55
-
-#define IUH_MSGB_SIZE	2048
-
 struct hnb_chan {
 	int is_ps;
 	uint32_t conn_id;
@@ -77,11 +65,9 @@ struct hnb {
 		struct hnb_chan *chan;
 	} cs;
 };
+
 struct hnb *hnb_alloc(void *tall_ctx);
 void hnb_free(struct hnb *hnb);
-int hnb_connect(struct hnb *hnb);
-
-int hnb_iuh_send(struct hnb *hnb, struct msgb *msg);
 
 extern void *tall_hnb_ctx;
 extern struct hnb *g_hnb;
