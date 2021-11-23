@@ -37,6 +37,7 @@
 #include <osmocom/hnodeb/hnbap.h>
 #include <osmocom/hnodeb/rua.h>
 #include <osmocom/hnodeb/hnodeb.h>
+#include <osmocom/hnodeb/hnb_shutdown_fsm.h>
 
 static int get_logevel_by_sn_type(int sn_type)
 {
@@ -100,12 +101,13 @@ static int hnb_iuh_read_cb(struct osmo_stream_cli *conn)
 			  NULL, NULL, &sinfo, &flags);
 	if (rc < 0) {
 		LOGP(DSCTP, LOGL_ERROR, "Error during sctp_recvmsg()\n");
-		/* FIXME: clean up after disappeared HNB */
 		osmo_stream_cli_close(conn);
+		hnb_shutdown(hnb, "sctp_recvmsg() error", false);
 		goto free_ret;
 	} else if (rc == 0) {
 		LOGP(DSCTP, LOGL_INFO, "Connection to HNBGW closed\n");
 		osmo_stream_cli_close(conn);
+		hnb_shutdown(hnb, "Iuh HNBGW conn closed", false);
 		rc = -1;
 		goto free_ret;
 	} else {
@@ -115,6 +117,14 @@ static int hnb_iuh_read_cb(struct osmo_stream_cli *conn)
 	if (flags & MSG_NOTIFICATION) {
 		union sctp_notification *notif = (union sctp_notification *) msgb_data(msg);
 		log_sctp_notification(notif);
+		switch (notif->sn_header.sn_type) {
+		case SCTP_SHUTDOWN_EVENT:
+			osmo_fsm_inst_dispatch(hnb->shutdown_fi, HNB_SHUTDOWN_EV_START, NULL);
+			hnb_shutdown(hnb, "Iuh HNBGW conn notification (SCTP_SHUTDOWN_EVENT)", false);
+			break;
+		default:
+			break;
+		}
 		rc = 0;
 		goto free_ret;
 	}

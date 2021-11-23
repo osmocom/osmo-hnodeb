@@ -26,6 +26,7 @@
 
 #include <osmocom/hnodeb/hnodeb.h>
 #include <osmocom/hnodeb/iuh.h>
+#include <osmocom/hnodeb/hnb_shutdown_fsm.h>
 
 
 struct hnb *hnb_alloc(void *tall_ctx)
@@ -41,6 +42,10 @@ struct hnb *hnb_alloc(void *tall_ctx)
 		.mcc = 1,
 		.mnc = 1,
 	};
+
+	hnb->shutdown_fi = osmo_fsm_inst_alloc(&hnb_shutdown_fsm, hnb, hnb,
+					       LOGL_INFO, NULL);
+
 	hnb_iuh_alloc(hnb);
 
 	return hnb;
@@ -48,6 +53,10 @@ struct hnb *hnb_alloc(void *tall_ctx)
 
 void hnb_free(struct hnb *hnb)
 {
+	if (hnb->shutdown_fi) {
+		osmo_fsm_inst_free(hnb->shutdown_fi);
+		hnb->shutdown_fi = NULL;
+	}
 	hnb_iuh_free(hnb);
 	talloc_free(hnb);
 }

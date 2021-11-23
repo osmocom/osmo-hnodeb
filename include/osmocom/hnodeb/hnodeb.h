@@ -26,6 +26,7 @@
 #include <osmocom/core/write_queue.h>
 #include <osmocom/core/logging.h>
 #include <osmocom/gsm/gsm23003.h>
+#include <osmocom/netif/stream.h>
 
 enum {
 	DMAIN,
@@ -61,6 +62,9 @@ struct hnb {
 	uint16_t rnc_id;
 
 	uint32_t ctx_id;
+
+	struct osmo_fsm_inst *shutdown_fi; /* FSM instance to manage shutdown procedure during process exit */
+	bool shutdown_fi_exit_proc; /* exit process when shutdown_fsm is finished? */
 
 	struct {
 		struct hnb_chan *chan;
