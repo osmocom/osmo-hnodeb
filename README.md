@@ -40,7 +40,7 @@ as well as the [VTY Reference Manual](https://ftp.osmocom.org/docs/latest/osmohn
 Mailing List
 ------------
 
-Discussions related to osmo-bts are happening on the
+Discussions related to osmo-hnodeb are happening on the
 openbsc@lists.osmocom.org mailing list, please see
 https://lists.osmocom.org/mailman/listinfo/openbsc for subscription
 options and the list archive.
@@ -60,5 +60,5 @@ contributions.  Please see
 https://osmocom.org/projects/cellular-infrastructure/wiki/Gerrit for
 more details
 
-The current patch queue for osmo-bts can be seen at
+The current patch queue for osmo-hnodeb can be seen at
 https://gerrit.osmocom.org/#/q/project:osmo-hnodeb+status:open

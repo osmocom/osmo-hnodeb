@@ -161,15 +161,7 @@ class TestCtrlHNB(TestCtrlBase):
         self.assertEqual(r['mtype'], 'ERROR')
         self.assertEqual(r['error'], 'Command not found')
 
-        r = self.do_set('rf_locked', '999')
-        self.assertEqual(r['mtype'], 'ERROR')
-        self.assertEqual(r['error'], 'Value failed verification.')
-
-        r = self.do_get('bts')
-        self.assertEqual(r['mtype'], 'ERROR')
-        self.assertEqual(r['error'], 'Error while parsing the index.')
-
-        r = self.do_get('bts.999')
+        r = self.do_get('hnodeb.999')
         self.assertEqual(r['mtype'], 'ERROR')
         self.assertEqual(r['error'], 'Error while resolving object')
 
