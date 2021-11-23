@@ -31,11 +31,58 @@
 #include <osmocom/core/socket.h>
 #include <osmocom/core/talloc.h>
 #include <osmocom/netif/stream.h>
+#include <osmocom/netif/sctp.h>
 
 #include <osmocom/hnodeb/iuh.h>
 #include <osmocom/hnodeb/hnbap.h>
 #include <osmocom/hnodeb/rua.h>
 #include <osmocom/hnodeb/hnodeb.h>
+
+static int get_logevel_by_sn_type(int sn_type)
+{
+	switch (sn_type) {
+	case SCTP_ADAPTATION_INDICATION:
+	case SCTP_PEER_ADDR_CHANGE:
+#ifdef SCTP_AUTHENTICATION_INDICATION
+	case SCTP_AUTHENTICATION_INDICATION:
+#endif
+#ifdef SCTP_SENDER_DRY_EVENT
+	case SCTP_SENDER_DRY_EVENT:
+#endif
+		return LOGL_INFO;
+	case SCTP_ASSOC_CHANGE:
+		return LOGL_NOTICE;
+	case SCTP_SHUTDOWN_EVENT:
+	case SCTP_PARTIAL_DELIVERY_EVENT:
+		return LOGL_NOTICE;
+	case SCTP_SEND_FAILED:
+	case SCTP_REMOTE_ERROR:
+		return LOGL_ERROR;
+	default:
+		return LOGL_NOTICE;
+	}
+}
+
+static void log_sctp_notification(union sctp_notification *notif)
+{
+	int log_level;
+
+	LOGP(DSCTP, LOGL_INFO, "Iuh SCTP NOTIFICATION %u flags=0x%0x\n",
+	     notif->sn_header.sn_type, notif->sn_header.sn_flags);
+
+	log_level = get_logevel_by_sn_type(notif->sn_header.sn_type);
+
+	switch (notif->sn_header.sn_type) {
+	case SCTP_ASSOC_CHANGE:
+		LOGP(DSCTP, log_level, "Iuh SCTP_ASSOC_CHANGE: %s\n",
+		     osmo_sctp_assoc_chg_str(notif->sn_assoc_change.sac_state));
+		break;
+	default:
+		LOGP(DSCTP, log_level, "Iuh %s\n",
+		     osmo_sctp_sn_type_str(notif->sn_header.sn_type));
+		break;
+	}
+}
 
 static int hnb_iuh_read_cb(struct osmo_stream_cli *conn)
 {
@@ -66,7 +113,8 @@ static int hnb_iuh_read_cb(struct osmo_stream_cli *conn)
 	}
 
 	if (flags & MSG_NOTIFICATION) {
-		LOGP(DSCTP, LOGL_DEBUG, "Ignoring SCTP notification\n");
+		union sctp_notification *notif = (union sctp_notification *) msgb_data(msg);
+		log_sctp_notification(notif);
 		rc = 0;
 		goto free_ret;
 	}
