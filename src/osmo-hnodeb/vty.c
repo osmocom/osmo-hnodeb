@@ -47,6 +47,10 @@ int hnb_vty_go_parent(struct vty *vty)
 		vty->node = HNODEB_NODE;
 		vty->index = g_hnb;
 		break;
+	case LLSK_NODE:
+		vty->node = HNODEB_NODE;
+		vty->index = g_hnb;
+		break;
 	case HNODEB_NODE:
 		vty->node = CONFIG_NODE;
 		vty->index = g_hnb;
@@ -247,6 +251,36 @@ DEFUN(cfg_hnodeb_iuh_remote_port, cfg_hnodeb_iuh_remote_port_cmd,
 	return CMD_SUCCESS;
 }
 
+static struct cmd_node llsk_node = {
+	LLSK_NODE,
+	"%s(config-ll-socket)# ",
+	1,
+};
+
+#define LLSK_STR "Configure the Lower Layer Unix Domain Socket\n"
+
+DEFUN(cfg_hnodeb_llsk,
+      cfg_hnodeb_llsk_cmd,
+      "ll-socket", LLSK_STR)
+{
+	OSMO_ASSERT(g_hnb);
+	vty->index = g_hnb;
+	vty->node = LLSK_NODE;
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_hnodeb_llsk_path, cfg_hnodeb_llsk_path_cmd,
+      "path PATH",
+      "Configure the Lower Layer Unix Domain Socket path\n"
+      "UNIX socket path\n")
+{
+	osmo_prim_srv_link_set_addr(g_hnb->llsk_link, argv[0]);
+
+	/* FIXME: re-open the interface? */
+	return CMD_SUCCESS;
+}
+
 
 static int config_write_hnodeb(struct vty *vty)
 {
@@ -266,9 +300,10 @@ static int config_write_hnodeb(struct vty *vty)
 		vty_out(vty, "  local-port %u%s", g_hnb->iuh.local_port, VTY_NEWLINE);
 	vty_out(vty, "  remote-ip %s%s", g_hnb->iuh.remote_addr, VTY_NEWLINE);
 	vty_out(vty, "  remote-port %u%s", g_hnb->iuh.remote_port, VTY_NEWLINE);
+	vty_out(vty, " ll-socket%s", VTY_NEWLINE);
+	vty_out(vty, "  path %s%s", osmo_prim_srv_link_get_addr(g_hnb->llsk_link), VTY_NEWLINE);
 	return CMD_SUCCESS;
 }
-
 
 #define RANAP_STR	"RANAP related commands\n"
 #define CSPS_STR	"Circuit Switched\n" "Packet Switched\n"
@@ -321,6 +356,9 @@ void hnb_vty_init(void)
 	install_element(IUH_NODE, &cfg_hnodeb_iuh_local_port_cmd);
 	install_element(IUH_NODE, &cfg_hnodeb_iuh_remote_ip_cmd);
 	install_element(IUH_NODE, &cfg_hnodeb_iuh_remote_port_cmd);
+	install_element(HNODEB_NODE, &cfg_hnodeb_llsk_cmd);
+	install_node(&llsk_node, NULL);
+	install_element(LLSK_NODE, &cfg_hnodeb_llsk_path_cmd);
 
 	install_element_ve(&asn_dbg_cmd);
 	install_element_ve(&ranap_reset_cmd);

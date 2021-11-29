@@ -1,0 +1,134 @@
+/* (C) 2021 by sysmocom - s.f.m.c. GmbH <info@sysmocom.de>
+ * Author: Pau Espin Pedrol <pespin@sysmocom.de>
+ * All Rights Reserved
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/lienses/>.
+ *
+ */
+
+#include <errno.h>
+
+#include <osmocom/core/prim.h>
+#include <osmocom/core/logging.h>
+
+#include <osmocom/hnodeb/hnodeb.h>
+#include <osmocom/hnodeb/llsk.h>
+#include <osmocom/hnodeb/hnb_prim.h>
+#include <osmocom/hnodeb/hnb_shutdown_fsm.h>
+
+static int llsk_opened_cb(struct osmo_prim_srv *srv)
+{
+	struct hnb *hnb = (struct hnb *)osmo_prim_srv_get_priv(srv);
+
+	if (hnb->llsk) {
+		LOGP(DLLSK, LOGL_ERROR, "New connection opened while one is already active, dropping it\n");
+		osmo_prim_srv_close(srv);
+		return 0;
+	}
+	LOGP(DLLSK, LOGL_NOTICE, "LLSK conn is UP\n");
+	hnb->llsk = srv;
+	return 0;
+}
+
+static int llsk_closed_cb(struct osmo_prim_srv *srv)
+{
+	struct hnb *hnb = (struct hnb *)osmo_prim_srv_get_priv(srv);
+
+	if (!hnb->llsk) {
+		LOGP(DLLSK, LOGL_ERROR, "closed_cb received but we have no active llsk conn!\n");
+		return 0;
+	}
+	/* If a later conn different than active one is dropped (because we closed it): */
+	if (hnb->llsk != srv)
+		return 0;
+	LOGP(DLLSK, LOGL_NOTICE, "LLSK conn is DOWN\n");
+
+	hnb->llsk = NULL;
+	hnb->llsk_valid_sapi_mask = 0x0;
+	osmo_timer_del(&hnb->llsk_defer_configure_ind_timer);
+	hnb_shutdown(hnb, "LLSK conn dropped", false);
+	return 0;
+}
+
+bool hnb_llsk_connected(const struct hnb *hnb)
+{
+	return !!hnb->llsk;
+}
+
+bool hnb_llsk_can_be_configured(struct hnb *hnb)
+{
+	if (!hnb->registered)
+		return false;
+	if (!hnb->llsk)
+		return false;
+
+	if (hnb->llsk_valid_sapi_mask & (1 << HNB_PRIM_SAPI_IUH))
+		return true;
+	return false;
+}
+
+static void llsk_defer_configure_ind_timer_cb(void *data)
+{
+	struct hnb *hnb = (struct hnb *)data;
+	llsk_iuh_tx_configure_ind(hnb);
+}
+
+static int llsk_rx_sapi_version_cb(struct osmo_prim_srv *prim_srv, uint32_t sapi, uint16_t rem_version)
+{
+	struct hnb *hnb = (struct hnb *)osmo_prim_srv_get_priv(prim_srv);
+	if (sapi > sizeof(hnb->llsk_valid_sapi_mask)*8 - 1)
+		return -1;
+	hnb->llsk_valid_sapi_mask |= (1 << sapi);
+
+	/* Defer CONFIGURE.req after we have confirmed the versions */
+	if (hnb_llsk_can_be_configured(hnb))
+		osmo_timer_schedule(&hnb->llsk_defer_configure_ind_timer, 0, 0);
+
+	return rem_version;
+}
+
+static int llsk_rx_cb(struct osmo_prim_srv *srv, struct osmo_prim_hdr *oph)
+{
+	struct hnb *hnb = (struct hnb *)osmo_prim_srv_get_priv(srv);
+	LOGP(DLLSK, LOGL_DEBUG, "llsk_rx_cb() SAP=%u (%u bytes): %s\n", oph->sap,
+	     msgb_length(oph->msg), osmo_hexdump(msgb_data(oph->msg), msgb_length(oph->msg)));
+
+	switch (oph->sap) {
+	case HNB_PRIM_SAPI_IUH:
+		return llsk_rx_iuh(hnb, oph);
+	case HNB_PRIM_SAPI_GTP:
+	case HNB_PRIM_SAPI_AUDIO:
+		LOGP(DLLSK, LOGL_ERROR, "Rx SAPI %u not yet implemented (len=%u)\n",
+		     oph->sap, msgb_length(oph->msg));
+		return -EINVAL;
+	default:
+		LOGP(DLLSK, LOGL_ERROR, "Rx for unknwon SAPI %u (len=%u)\n",
+		     oph->sap, msgb_length(oph->msg));
+		return -EINVAL;
+	}
+}
+
+int hnb_llsk_alloc(struct hnb *hnb)
+{
+	hnb->llsk_link = osmo_prim_srv_link_alloc(hnb);
+	osmo_prim_srv_link_set_priv(hnb->llsk_link, hnb);
+	osmo_prim_srv_link_set_log_category(hnb->llsk_link, DLLSK);
+	osmo_prim_srv_link_set_addr(hnb->llsk_link, HNB_PRIM_UD_SOCK_DEFAULT);
+	osmo_prim_srv_link_set_opened_conn_cb(hnb->llsk_link, llsk_opened_cb);
+	osmo_prim_srv_link_set_closed_conn_cb(hnb->llsk_link, llsk_closed_cb);
+	osmo_prim_srv_link_set_rx_sapi_version_cb(hnb->llsk_link, llsk_rx_sapi_version_cb);
+	osmo_prim_srv_link_set_rx_cb(hnb->llsk_link, llsk_rx_cb);
+	osmo_timer_setup(&hnb->llsk_defer_configure_ind_timer, llsk_defer_configure_ind_timer_cb, hnb);
+	return 0;
+}

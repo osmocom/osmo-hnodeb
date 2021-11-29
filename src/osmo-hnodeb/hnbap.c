@@ -33,7 +33,9 @@
 #include <osmocom/hnodeb/hnbap.h>
 #include <osmocom/hnodeb/hnodeb.h>
 #include <osmocom/hnodeb/iuh.h>
+#include <osmocom/hnodeb/hnb_prim.h>
 #include <osmocom/hnodeb/hnb_shutdown_fsm.h>
+#include <osmocom/hnodeb/llsk.h>
 
 static int hnb_rx_hnb_register_acc(struct hnb *hnb, ANY_t *in)
 {
@@ -42,19 +44,27 @@ static int hnb_rx_hnb_register_acc(struct hnb *hnb, ANY_t *in)
 
 	rc = hnbap_decode_hnbregisteraccepties(&accept, in);
 	if (rc < 0) {
+		hnb_shutdown(hnb, "Failed decoding HnbRegisterAccept IEs", false);
+		return rc;
 	}
 
 	hnb->rnc_id = accept.rnc_id;
+	hnb->registered = true;
 	LOGP(DHNBAP, LOGL_INFO, "Rx HNB Register accept with RNC ID %u\n", hnb->rnc_id);
 
 	hnbap_free_hnbregisteraccepties(&accept);
-	return 0;
+
+	if (hnb_llsk_can_be_configured(hnb))
+		llsk_iuh_tx_configure_ind(hnb);
+	return rc;
 }
 
 static int hnb_rx_hnb_register_rej(struct hnb *hnb, ANY_t *in)
 {
 	int rc;
 	HNBAP_HNBRegisterRejectIEs_t reject;
+
+	hnb->registered = false;
 
 	rc = hnbap_decode_hnbregisterrejecties(&reject, in);
 	if (rc < 0) {

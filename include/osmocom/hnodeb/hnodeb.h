@@ -19,14 +19,21 @@
  */
 #pragma once
 
+#include <stdint.h>
+#include <stdbool.h>
+
 #include <asn1c/asn1helpers.h>
 
 #include <osmocom/core/select.h>
+#include <osmocom/core/timer.h>
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/write_queue.h>
 #include <osmocom/core/logging.h>
 #include <osmocom/gsm/gsm23003.h>
+#include <osmocom/gsm/protocol/gsm_23_003.h>
 #include <osmocom/netif/stream.h>
+
+#include <osmocom/hnodeb/llsk.h>
 
 enum {
 	DMAIN,
@@ -34,14 +41,29 @@ enum {
 	DRUA,
 	DRANAP,
 	DSCTP,
+	DLLSK,
 };
 extern const struct log_info hnb_log_info;
 
-struct hnb_chan {
-	int is_ps;
+struct hnb;
+
+struct hnb_ue {
+	struct llist_head list; /* Item in struct hnb->ue_list */
+	struct hnb *hnb; /* backpointer */
 	uint32_t conn_id;
-	char *imsi;
+	char imsi[OSMO_IMSI_BUF_SIZE];
+	struct hnb_ue_cs_ctx {
+		bool active; /* Is this chan in use? */
+		bool conn_est_cnf_pending; /* Did we send CONN_ESTABLISH_CNF to lower layers? */
+	} conn_cs;
+	struct hnb_ue_ps_ctx {
+		bool active; /* Is this chan in use? */
+		bool conn_est_cnf_pending; /* Did we send CONN_ESTABLISH_CNF to lower layers? */
+	} conn_ps;
 };
+struct hnb_ue *hnb_ue_alloc(struct hnb *hnb, uint32_t conn_id);
+void hnb_ue_free(struct hnb_ue *ue);
+void hnb_ue_reset_chan(struct hnb_ue *ue, bool is_ps);
 
 struct hnb {
 	char *identity; /* HNB-Identity */
@@ -58,20 +80,27 @@ struct hnb {
 		struct osmo_stream_cli *client;
 	} iuh;
 
+	/* Lower Layer UD socket */
+	struct osmo_prim_srv_link *llsk_link;
+	struct osmo_prim_srv *llsk;
+	uint8_t llsk_valid_sapi_mask;
+	struct osmo_timer_list llsk_defer_configure_ind_timer;
+
 	uint16_t rnc_id;
+	bool registered; /* Set to true once HnbRegisterAccept was received from Iuh. rnc_id is valid iif registered==true */
 
 	uint32_t ctx_id;
 
 	struct osmo_fsm_inst *shutdown_fi; /* FSM instance to manage shutdown procedure during process exit */
 	bool shutdown_fi_exit_proc; /* exit process when shutdown_fsm is finished? */
 
-	struct {
-		struct hnb_chan *chan;
-	} cs;
+	struct llist_head ue_list; /* list of struct hnb_ue */
 };
 
 struct hnb *hnb_alloc(void *tall_ctx);
 void hnb_free(struct hnb *hnb);
+struct hnb_ue *hnb_find_ue_by_id(const struct hnb *hnb, uint32_t conn_id);
+struct hnb_ue *hnb_find_ue_by_imsi(const struct hnb *hnb, char *imsi);
 
 extern void *tall_hnb_ctx;
 extern struct hnb *g_hnb;

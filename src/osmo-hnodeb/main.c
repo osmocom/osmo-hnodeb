@@ -265,6 +265,13 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
+	/* Start listening on lower layer unix domain socket: */
+	rc = osmo_prim_srv_link_open(g_hnb->llsk_link);
+	if (rc < 0) {
+		perror("Error opening lower layer socket");
+		exit(1);
+	}
+
 	rc = hnb_iuh_connect(g_hnb);
 	if (rc < 0) {
 		perror("Error connecting to Iuh port");

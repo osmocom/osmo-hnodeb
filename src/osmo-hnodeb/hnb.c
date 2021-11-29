@@ -23,10 +23,12 @@
 #include <osmocom/core/socket.h>
 #include <osmocom/core/talloc.h>
 #include <osmocom/netif/stream.h>
+#include <osmocom/netif/prim.h>
 
 #include <osmocom/hnodeb/hnodeb.h>
 #include <osmocom/hnodeb/iuh.h>
 #include <osmocom/hnodeb/hnb_shutdown_fsm.h>
+#include <osmocom/hnodeb/hnb_prim.h>
 
 
 struct hnb *hnb_alloc(void *tall_ctx)
@@ -37,14 +39,17 @@ struct hnb *hnb_alloc(void *tall_ctx)
 	if (!hnb)
 		return NULL;
 
+	INIT_LLIST_HEAD(&hnb->ue_list);
+
 	hnb->identity = talloc_strdup(hnb, "OsmoHNodeB");
 	hnb->plmn = (struct osmo_plmn_id){
 		.mcc = 1,
 		.mnc = 1,
 	};
-
 	hnb->shutdown_fi = osmo_fsm_inst_alloc(&hnb_shutdown_fsm, hnb, hnb,
 					       LOGL_INFO, NULL);
+
+	hnb_llsk_alloc(hnb);
 
 	hnb_iuh_alloc(hnb);
 
@@ -53,10 +58,78 @@ struct hnb *hnb_alloc(void *tall_ctx)
 
 void hnb_free(struct hnb *hnb)
 {
+	struct hnb_ue *ue, *ue_tmp;
+
+	llist_for_each_entry_safe(ue, ue_tmp, &hnb->ue_list, list)
+		hnb_ue_free(ue);
+
 	if (hnb->shutdown_fi) {
 		osmo_fsm_inst_free(hnb->shutdown_fi);
 		hnb->shutdown_fi = NULL;
 	}
 	hnb_iuh_free(hnb);
+
+	osmo_timer_del(&hnb->llsk_defer_configure_ind_timer);
+	osmo_prim_srv_link_free(hnb->llsk_link);
+	hnb->llsk_link = NULL;
+
 	talloc_free(hnb);
+}
+
+struct hnb_ue *hnb_ue_alloc(struct hnb *hnb, uint32_t conn_id)
+{
+	struct hnb_ue *ue;
+
+	ue = talloc_zero(hnb, struct hnb_ue);
+	if (!ue)
+		return NULL;
+
+	ue->hnb = hnb;
+	ue->conn_id = conn_id;
+
+	llist_add(&ue->list, &hnb->ue_list);
+
+	return ue;
+}
+
+void hnb_ue_free(struct hnb_ue *ue)
+{
+	llist_del(&ue->list);
+	talloc_free(ue);
+}
+
+void hnb_ue_reset_chan(struct hnb_ue *ue, bool is_ps)
+{
+	if (is_ps)
+		ue->conn_ps = (struct hnb_ue_ps_ctx){0};
+	else
+		ue->conn_cs = (struct hnb_ue_cs_ctx){0};
+}
+
+struct hnb_ue *hnb_find_ue_by_id(const struct hnb *hnb, uint32_t conn_id)
+{
+	struct hnb_ue *ue;
+
+	llist_for_each_entry(ue, &hnb->ue_list, list) {
+		if (ue->conn_id != conn_id)
+			continue;
+		return ue;
+	}
+	return NULL;
+}
+struct hnb_ue *hnb_find_ue_by_imsi(const struct hnb *hnb, char *imsi)
+{
+	struct hnb_ue *ue;
+
+	if (!imsi || imsi[0] == '\0')
+		return NULL;
+
+	llist_for_each_entry(ue, &hnb->ue_list, list) {
+		if (ue->imsi[0] == '\0')
+			continue;
+		if (strncmp(&ue->imsi[0], imsi, ARRAY_SIZE(ue->imsi)) != 0)
+			continue;
+		return ue;
+	}
+	return NULL;
 }

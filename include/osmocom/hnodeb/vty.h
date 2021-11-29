@@ -27,6 +27,7 @@
 enum hnb_vty_nodes {
 	HNODEB_NODE = _LAST_OSMOVTY_NODE,
 	IUH_NODE,
+	LLSK_NODE,
 };
 
 void hnb_vty_init(void);

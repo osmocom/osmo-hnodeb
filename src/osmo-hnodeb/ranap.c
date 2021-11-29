@@ -27,3 +27,8 @@
 
 #include <osmocom/hnodeb/rua.h>
 #include <osmocom/hnodeb/ranap.h>
+
+struct msgb *hnb_ranap_msgb_alloc(void)
+{
+	return msgb_alloc(1000, "ranap_tx");
+}

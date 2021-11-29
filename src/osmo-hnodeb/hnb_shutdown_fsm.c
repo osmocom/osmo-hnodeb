@@ -34,6 +34,11 @@
 static void st_none_on_enter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 {
 	struct hnb *hnb = (struct hnb *)fi->priv;
+
+	/* Reset state: */
+	hnb->registered = false;
+	hnb->rnc_id = 0;
+
 	hnb_iuh_connect(hnb); /* Start reconnect once we are done with shutdown and we didn't exit process */
 }
 

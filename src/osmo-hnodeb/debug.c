@@ -24,7 +24,7 @@
 static const struct log_info_cat log_cat[] = {
 	[DMAIN] = {
 		.name = "DMAIN", .loglevel = LOGL_NOTICE, .enabled = 1,
-		.color = "",
+		.color = "\033[1;37m",
 		.description = "Main program",
 	},
 	[DHNBAP] = {
@@ -46,6 +46,11 @@ static const struct log_info_cat log_cat[] = {
 		.name = "DSCTP", .loglevel = LOGL_NOTICE, .enabled = 1,
 		.color = "\033[1;36m",
 		.description = "SCTP connection on the Iuh link",
+	},
+	[DLLSK] = {
+		.name = "DLLSK", .loglevel = LOGL_NOTICE, .enabled = 1,
+		.color = "\033[1;31m",
+		.description = "Lower Layer Unix Domain Socket",
 	},
 };
 

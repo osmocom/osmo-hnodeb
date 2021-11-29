@@ -22,6 +22,9 @@
 #include <asn1c/ANY.h>
 
 struct hnb;
+struct hnb_ue;
 struct msgb;
+
+struct msgb *hnb_rua_msgb_alloc(void);
 
 int hnb_rua_rx(struct hnb *hnb, struct msgb *msg);

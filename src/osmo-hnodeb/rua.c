@@ -32,10 +32,23 @@
 #include <osmocom/hnodeb/iuh.h>
 #include <osmocom/hnodeb/hnodeb.h>
 
+
+struct msgb *hnb_rua_msgb_alloc(void)
+{
+	return msgb_alloc(1000, "rua_tx");
+}
+
 static void hnb_rua_dt_handle(struct hnb *hnb, ANY_t *in)
 {
 	RUA_DirectTransferIEs_t ies;
 	int rc;
+	struct hnb_ue *ue;
+	struct hnb_iuh_prim *iuh_prim;
+	uint32_t context_id;
+	bool is_ps;
+	uint8_t *ranap_buf;
+	size_t ranap_buf_len;
+	bool *conn_est_cnf_pending;
 
 	rc = rua_decode_directtransferies(&ies, in);
 	if (rc < 0) {
@@ -43,7 +56,44 @@ static void hnb_rua_dt_handle(struct hnb *hnb, ANY_t *in)
 		return;
 	}
 
+	context_id = asn1bitstr_to_u24(&ies.context_ID);
+	is_ps = (ies.cN_DomainIndicator == RUA_CN_DomainIndicator_ps_domain);
+	ranap_buf = ies.ranaP_Message.buf;
+	ranap_buf_len = ies.ranaP_Message.size;
 
+	LOGP(DRUA, LOGL_DEBUG, "Rx RUA DT context_id=%u is_ps=%u ranap_len=%zu\n",
+	     context_id, is_ps, ranap_buf_len);
+
+	if (!(ue = hnb_find_ue_by_id(hnb, context_id))) {
+		LOGP(DRUA, LOGL_ERROR, "Rx RUA DT: Failed finding ue context_id=%u is_ps=%u\n",
+		     context_id, is_ps);
+		goto free_ret;
+	}
+
+	conn_est_cnf_pending = is_ps ? &ue->conn_ps.conn_est_cnf_pending :
+				       &ue->conn_cs.conn_est_cnf_pending;
+	if (*conn_est_cnf_pending) {
+		*conn_est_cnf_pending = false;
+		LOGP(DLLSK, LOGL_INFO, "Tx IUH-CONN_ESTABLISH.cnf context_id=%u is_ps=%u\n",
+		     context_id, is_ps);
+		iuh_prim = hnb_iuh_makeprim_conn_establish_cnf(context_id, is_ps, 0);
+		if ((rc = osmo_prim_srv_send(hnb->llsk, iuh_prim->hdr.msg)) < 0) {
+			LOGP(DRUA, LOGL_ERROR, "Failed sending IUH-CONN_ESTABLISH.cnf context_id=%u is_ps=%u\n",
+			     context_id, is_ps);
+			goto free_ret;
+		}
+	}
+
+	LOGP(DLLSK, LOGL_DEBUG, "Tx IUH-CONN_DATA.ind context_id=%u is_ps=%u ranap_len=%zu\n",
+	     context_id, is_ps, ranap_buf_len);
+	iuh_prim = hnb_iuh_makeprim_conn_data_ind(context_id, is_ps, ranap_buf, ranap_buf_len);
+	if ((rc = osmo_prim_srv_send(hnb->llsk, iuh_prim->hdr.msg)) < 0) {
+		LOGP(DRUA, LOGL_ERROR, "Failed sending IUH-CONN_DATA.ind context_id=%u is_ps=%u ranap_len=%zu\n",
+		     context_id, is_ps, ranap_buf_len);
+		goto free_ret;
+	}
+
+free_ret:
 	/* FIXME: what to do with the asn1c-allocated memory */
 	rua_free_directtransferies(&ies);
 }
@@ -52,16 +102,79 @@ static void hnb_rua_cl_handle(struct hnb *hnb, ANY_t *in)
 {
 	RUA_ConnectionlessTransferIEs_t ies;
 	int rc;
+	struct hnb_iuh_prim *iuh_prim;
+	uint8_t *ranap_buf;
+	size_t ranap_buf_len;
 
 	rc = rua_decode_connectionlesstransferies(&ies, in);
 	if (rc < 0) {
 		LOGP(DRUA, LOGL_INFO, "failed to decode RUA CL IEs\n");
 		return;
 	}
+	ranap_buf = ies.ranaP_Message.buf;
+	ranap_buf_len = ies.ranaP_Message.size;
 
+	LOGP(DRUA, LOGL_DEBUG, "Rx RUA UDT ranap_len=%zu\n", ranap_buf_len);
 
+	LOGP(DLLSK, LOGL_DEBUG, "Tx IUH-UNITDATA.ind ranap_len=%zu\n", ranap_buf_len);
+	iuh_prim = hnb_iuh_makeprim_unitdata_ind(ranap_buf, ranap_buf_len);
+	if ((rc = osmo_prim_srv_send(hnb->llsk, iuh_prim->hdr.msg)) < 0) {
+		LOGP(DRUA, LOGL_ERROR, "Failed sending IUH-CONN_DATA.ind ranap_len=%zu\n",
+		     ranap_buf_len);
+		goto free_ret;
+	}
+
+free_ret:
 	/* FIXME: what to do with the asn1c-allocated memory */
 	rua_free_connectionlesstransferies(&ies);
+}
+
+
+static int hnb_rua_rx_initiating(struct hnb *hnb, RUA_InitiatingMessage_t *init)
+{
+	switch (init->procedureCode) {
+	case RUA_ProcedureCode_id_ConnectionlessTransfer:
+		LOGP(DRUA, LOGL_INFO, "RUA rx Initiating ConnectionlessTransfer\n");
+		hnb_rua_cl_handle(hnb, &init->value);
+		break;
+	case RUA_ProcedureCode_id_DirectTransfer:
+		LOGP(DRUA, LOGL_INFO, "RUA rx Initiating DirectTransfer\n");
+		hnb_rua_dt_handle(hnb, &init->value);
+	default:
+		LOGP(DRUA, LOGL_INFO, "RUA rx unknown Initiating message\n");
+		break;
+	}
+	return 0;
+}
+
+static int hnb_rua_rx_successful(struct hnb *hnb, RUA_SuccessfulOutcome_t *success)
+{
+	switch (success->procedureCode) {
+	case RUA_ProcedureCode_id_ConnectionlessTransfer:
+		LOGP(DRUA, LOGL_INFO, "RUA rx SuccessfulOutcome ConnectionlessTransfer\n");
+		hnb_rua_cl_handle(hnb, &success->value);
+		break;
+	case RUA_ProcedureCode_id_Connect:
+		LOGP(DRUA, LOGL_INFO, "RUA rx SuccessfulOutcome Connect\n");
+		break;
+	case RUA_ProcedureCode_id_DirectTransfer:
+		LOGP(DRUA, LOGL_INFO, "RUA rx SuccessfulOutcome DirectTransfer\n");
+		hnb_rua_dt_handle(hnb, &success->value);
+		break;
+	case RUA_ProcedureCode_id_Disconnect:
+		LOGP(DRUA, LOGL_INFO, "RUA rx SuccessfulOutcome Disconnect\n");
+		break;
+	case RUA_ProcedureCode_id_ErrorIndication:
+		LOGP(DRUA, LOGL_INFO, "RUA rx SuccessfulOutcome ErrorIndication\n");
+		break;
+	case RUA_ProcedureCode_id_privateMessage:
+		LOGP(DRUA, LOGL_INFO, "RUA rx SuccessfulOutcome privateMessage\n");
+		break;
+	default:
+		LOGP(DRUA, LOGL_INFO, "RUA rx unknown SuccessfulOutcome message\n");
+		break;
+	}
+	return 0;
 }
 
 int hnb_rua_rx(struct hnb *hnb, struct msgb *msg)
@@ -79,11 +192,9 @@ int hnb_rua_rx(struct hnb *hnb, struct msgb *msg)
 
 	switch (pdu->present) {
 	case RUA_RUA_PDU_PR_successfulOutcome:
-		LOGP(DRUA, LOGL_INFO, "RUA_RUA_PDU_PR_successfulOutcome\n");
-		break;
+		return hnb_rua_rx_successful(hnb, &pdu->choice.successfulOutcome);
 	case RUA_RUA_PDU_PR_initiatingMessage:
-		LOGP(DRUA, LOGL_INFO, "RUA_RUA_PDU_PR_initiatingMessage\n");
-		break;
+		return hnb_rua_rx_initiating(hnb, &pdu->choice.initiatingMessage);
 	case RUA_RUA_PDU_PR_NOTHING:
 		LOGP(DRUA, LOGL_INFO, "RUA_RUA_PDU_PR_NOTHING\n");
 		break;
@@ -92,32 +203,6 @@ int hnb_rua_rx(struct hnb *hnb, struct msgb *msg)
 		break;
 	default:
 		LOGP(DRUA, LOGL_INFO, "Unexpected RUA message received\n");
-		break;
-	}
-
-	switch (pdu->choice.successfulOutcome.procedureCode) {
-	case RUA_ProcedureCode_id_ConnectionlessTransfer:
-		LOGP(DRUA, LOGL_INFO, "RUA rx Connectionless Transfer\n");
-		hnb_rua_cl_handle(hnb, &pdu->choice.successfulOutcome.value);
-		break;
-	case RUA_ProcedureCode_id_Connect:
-		LOGP(DRUA, LOGL_INFO, "RUA rx Connect\n");
-		break;
-	case RUA_ProcedureCode_id_DirectTransfer:
-		LOGP(DRUA, LOGL_INFO, "RUA rx DirectTransfer\n");
-		hnb_rua_dt_handle(hnb, &pdu->choice.successfulOutcome.value);
-		break;
-	case RUA_ProcedureCode_id_Disconnect:
-		LOGP(DRUA, LOGL_INFO, "RUA rx Disconnect\n");
-		break;
-	case RUA_ProcedureCode_id_ErrorIndication:
-		LOGP(DRUA, LOGL_INFO, "RUA rx ErrorIndication\n");
-		break;
-	case RUA_ProcedureCode_id_privateMessage:
-		LOGP(DRUA, LOGL_INFO, "RUA rx privateMessage\n");
-		break;
-	default:
-		LOGP(DRUA, LOGL_INFO, "RUA rx unknown message\n");
 		break;
 	}
 

@@ -35,6 +35,8 @@ osmo_hnodeb_SOURCES = \
 	hnb.c \
 	hnb_shutdown_fsm.c \
 	iuh.c \
+	llsk.c \
+	llsk_iuh.c \
 	ranap.c \
 	rua.c \
 	vty.c \
