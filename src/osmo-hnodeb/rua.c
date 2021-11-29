@@ -21,6 +21,7 @@
 #include <errno.h>
 
 #include <asn1c/ANY.h>
+#include <asn1c/asn1helpers.h>
 
 #include <osmocom/rua/rua_ies_defs.h>
 #include <osmocom/ranap/ranap_common_cn.h>
@@ -29,22 +30,7 @@
 #include <osmocom/hnodeb/rua.h>
 #include <osmocom/hnodeb/ranap.h>
 #include <osmocom/hnodeb/iuh.h>
-
-int hnb_tx_dt(struct hnb *hnb, struct msgb *txm)
-{
-	struct hnb_chan *chan;
-	struct msgb *rua;
-
-	chan = hnb->cs.chan;
-	if (!chan) {
-		LOGP(DRUA, LOGL_INFO, "hnb_nas_tx_tmsi_realloc_compl(): No CS channel established yet.\n");
-		return -1;
-	}
-
-	rua = rua_new_dt(chan->is_ps, chan->conn_id, txm);
-	hnb_iuh_send(hnb, rua);
-	return 0;
-}
+#include <osmocom/hnodeb/hnodeb.h>
 
 static void hnb_rua_dt_handle(struct hnb *hnb, ANY_t *in)
 {
@@ -57,7 +43,6 @@ static void hnb_rua_dt_handle(struct hnb *hnb, ANY_t *in)
 		return;
 	}
 
-	rc = ranap_cn_rx_co(hnb_rua_dt_handle_ranap, hnb, ies.ranaP_Message.buf, ies.ranaP_Message.size);
 
 	/* FIXME: what to do with the asn1c-allocated memory */
 	rua_free_directtransferies(&ies);
@@ -74,7 +59,6 @@ static void hnb_rua_cl_handle(struct hnb *hnb, ANY_t *in)
 		return;
 	}
 
-	rc = ranap_cn_rx_cl(hnb_rua_cl_handle_ranap, hnb, ies.ranaP_Message.buf, ies.ranaP_Message.size);
 
 	/* FIXME: what to do with the asn1c-allocated memory */
 	rua_free_connectionlesstransferies(&ies);

@@ -34,7 +34,6 @@ enum {
 	DRUA,
 	DRANAP,
 	DSCTP,
-	DNAS,
 };
 extern const struct log_info hnb_log_info;
 

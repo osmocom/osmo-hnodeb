@@ -270,41 +270,9 @@ static int config_write_hnodeb(struct vty *vty)
 }
 
 
-static struct cmd_node chan_node = {
-	CHAN_NODE,
-	"%s(chan)> ",
-	1,
-};
-
-#define HNBAP_STR	"HNBAP related commands\n"
-#define HNB_STR		"HomeNodeB commands\n"
-#define UE_STR		"User Equipment commands\n"
 #define RANAP_STR	"RANAP related commands\n"
 #define CSPS_STR	"Circuit Switched\n" "Packet Switched\n"
 
-DEFUN(hnb_register, hnb_register_cmd,
-	"hnbap hnb register", HNBAP_STR HNB_STR "Send HNB-REGISTER REQUEST")
-{
-	hnb_send_register_req(g_hnb);
-
-	return CMD_SUCCESS;
-}
-
-DEFUN(hnb_deregister, hnb_deregister_cmd,
-	"hnbap hnb deregister", HNBAP_STR HNB_STR "Send HNB-DEREGISTER REQUEST")
-{
-	hnb_send_deregister_req(g_hnb);
-
-	return CMD_SUCCESS;
-}
-
-DEFUN(ue_register, ue_register_cmd,
-	"hnbap ue register IMSI", HNBAP_STR UE_STR "Send UE-REGISTER REQUEST")
-{
-	hnb_ue_register_tx(g_hnb, argv[0]);
-
-	return CMD_SUCCESS;
-}
 
 DEFUN(asn_dbg, asn_dbg_cmd,
 	"asn-debug (1|0)", "Enable or disable libasn1c debugging")
@@ -336,40 +304,6 @@ DEFUN(ranap_reset, ranap_reset_cmd,
 	return CMD_SUCCESS;
 }
 
-DEFUN(chan, chan_cmd,
-	"channel (cs|ps) lu imsi IMSI",
-	"Open a new Signalling Connection\n"
-	"To Circuit-Switched CN\n"
-	"To Packet-Switched CN\n"
-	"Performing a Location Update\n"
-	)
-{
-	struct hnb_chan *chan;
-	struct msgb *msg, *rua;
-	static uint16_t conn_id = 42;
-
-	chan = talloc_zero(tall_hnb_ctx, struct hnb_chan);
-	if (!strcmp(argv[0], "ps"))
-		chan->is_ps = 1;
-	chan->imsi = talloc_strdup(chan, argv[1]);
-	chan->conn_id = conn_id;
-	conn_id++;
-
-	msg = gen_initue_lu(g_hnb, chan->is_ps, chan->conn_id, chan->imsi);
-	rua = rua_new_conn(chan->is_ps, chan->conn_id, msg);
-
-	hnb_iuh_send(g_hnb, rua);
-
-	vty->index = chan;
-	vty->node = CHAN_NODE;
-
-	if (!chan->is_ps)
-		g_hnb->cs.chan = chan;
-
-
-	return CMD_SUCCESS;
-}
-
 void hnb_vty_init(void)
 {
 	install_element(CONFIG_NODE, &cfg_hnodeb_cmd);
@@ -389,11 +323,5 @@ void hnb_vty_init(void)
 	install_element(IUH_NODE, &cfg_hnodeb_iuh_remote_port_cmd);
 
 	install_element_ve(&asn_dbg_cmd);
-	install_element_ve(&hnb_register_cmd);
-	install_element_ve(&hnb_deregister_cmd);
-	install_element_ve(&ue_register_cmd);
 	install_element_ve(&ranap_reset_cmd);
-	install_element_ve(&chan_cmd);
-
-	install_node(&chan_node, NULL);
 }

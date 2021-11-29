@@ -25,4 +25,3 @@ struct hnb;
 struct msgb;
 
 int hnb_rua_rx(struct hnb *hnb, struct msgb *msg);
-int hnb_tx_dt(struct hnb *hnb, struct msgb *txm);
