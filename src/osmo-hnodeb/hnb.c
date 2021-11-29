@@ -20,15 +20,20 @@
 
 #include "config.h"
 
+#include <errno.h>
+
 #include <osmocom/core/socket.h>
 #include <osmocom/core/talloc.h>
 #include <osmocom/netif/stream.h>
 #include <osmocom/netif/prim.h>
 
+#include <osmocom/trau/osmo_ortp.h>
+
 #include <osmocom/hnodeb/hnodeb.h>
 #include <osmocom/hnodeb/iuh.h>
 #include <osmocom/hnodeb/hnb_shutdown_fsm.h>
 #include <osmocom/hnodeb/hnb_prim.h>
+#include <osmocom/hnodeb/rtp.h>
 
 
 struct hnb *hnb_alloc(void *tall_ctx)
@@ -46,6 +51,14 @@ struct hnb *hnb_alloc(void *tall_ctx)
 		.mcc = 1,
 		.mnc = 1,
 	};
+
+	hnb->rtp.jitter_adaptive = false;
+	hnb->rtp.port_range_start = 16384;
+	hnb->rtp.port_range_end = 17407;
+	hnb->rtp.port_range_next = hnb->rtp.port_range_start;
+	hnb->rtp.ip_dscp = -1;
+	hnb->rtp.priority = -1;
+
 	hnb->shutdown_fi = osmo_fsm_inst_alloc(&hnb_shutdown_fsm, hnb, hnb,
 					       LOGL_INFO, NULL);
 
@@ -94,16 +107,20 @@ struct hnb_ue *hnb_ue_alloc(struct hnb *hnb, uint32_t conn_id)
 
 void hnb_ue_free(struct hnb_ue *ue)
 {
+	hnb_ue_reset_chan(ue, true);
+	hnb_ue_reset_chan(ue, false);
 	llist_del(&ue->list);
 	talloc_free(ue);
 }
 
 void hnb_ue_reset_chan(struct hnb_ue *ue, bool is_ps)
 {
-	if (is_ps)
+	if (is_ps) {
 		ue->conn_ps = (struct hnb_ue_ps_ctx){0};
-	else
+	} else {
+		hnb_ue_voicecall_release(ue);
 		ue->conn_cs = (struct hnb_ue_cs_ctx){0};
+	}
 }
 
 struct hnb_ue *hnb_find_ue_by_id(const struct hnb *hnb, uint32_t conn_id)

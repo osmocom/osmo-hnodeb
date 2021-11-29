@@ -52,6 +52,11 @@ static const struct log_info_cat log_cat[] = {
 		.color = "\033[1;31m",
 		.description = "Lower Layer Unix Domain Socket",
 	},
+	[DRTP] = {
+		.name = "DRTP", .loglevel = LOGL_NOTICE, .enabled = 1,
+		.color = "\033[1;32m",
+		.description = "RTP Core Network side",
+	},
 };
 
 const struct log_info hnb_log_info = {

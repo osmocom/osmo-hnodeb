@@ -41,6 +41,8 @@
 #include <osmocom/vty/cpu_sched_vty.h>
 #include <osmocom/vty/ports.h>
 
+#include <osmocom/trau/osmo_ortp.h>
+
 #include <osmocom/ranap/ranap_common.h> /* ranap_set_log_area() */
 
 #include <osmocom/hnodeb/hnbap.h>
@@ -224,6 +226,7 @@ static void signal_handler(int signum)
 int main(int argc, char **argv)
 {
 	int rc;
+	void *tall_rtp_ctx;
 
 	/* Track the use of talloc NULL memory contexts */
 	talloc_enable_null_tracking();
@@ -245,6 +248,11 @@ int main(int argc, char **argv)
 	logging_vty_add_cmds();
 	osmo_talloc_vty_add_cmds();
 	osmo_cpu_sched_vty_init(tall_hnb_ctx);
+
+	/* allocate a talloc pool for ORTP to ensure it doesn't have to go back
+	 * to the libc malloc all the time */
+	tall_rtp_ctx = talloc_pool(tall_hnb_ctx, 262144);
+	osmo_rtp_init(tall_rtp_ctx);
 
 	g_hnb = hnb_alloc(tall_hnb_ctx);
 	hnb_vty_init();

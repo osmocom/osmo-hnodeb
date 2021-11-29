@@ -6,6 +6,7 @@ noinst_HEADERS = \
 	iuh.h \
 	llsk.h \
 	ranap.h \
+	rtp.h \
 	rua.h \
 	vty.h \
 	$(NULL)

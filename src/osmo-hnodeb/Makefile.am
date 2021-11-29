@@ -14,6 +14,7 @@ AM_CFLAGS = \
 	$(LIBOSMONETIF_CFLAGS) \
 	$(COVERAGE_CFLAGS) \
 	$(LIBOSMOABIS_CFLAGS) \
+	$(LIBOSMOTRAU_CFLAGS) \
 	$(LIBOSMOSIGTRAN_CFLAGS) \
 	$(LIBOSMORUA_CFLAGS) \
 	$(LIBOSMORANAP_CFLAGS) \
@@ -36,8 +37,10 @@ osmo_hnodeb_SOURCES = \
 	hnb_shutdown_fsm.c \
 	iuh.c \
 	llsk.c \
+	llsk_audio.c \
 	llsk_iuh.c \
 	ranap.c \
+	rtp.c \
 	rua.c \
 	vty.c \
 	$(NULL)
@@ -51,6 +54,7 @@ osmo_hnodeb_LDADD = \
 	$(LIBOSMONETIF_LIBS) \
 	$(COVERAGE_LDFLAGS) \
 	$(LIBOSMOABIS_LIBS) \
+	$(LIBOSMOTRAU_LIBS) \
 	$(LIBOSMOSIGTRAN_LIBS) \
 	$(LIBOSMORUA_LIBS) \
 	$(LIBOSMORANAP_LIBS) \

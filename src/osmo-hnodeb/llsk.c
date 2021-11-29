@@ -18,6 +18,9 @@
  */
 
 #include <errno.h>
+#include <sys/socket.h>
+#include <inttypes.h>
+#include <arpa/inet.h>
 
 #include <osmocom/core/prim.h>
 #include <osmocom/core/logging.h>
@@ -26,6 +29,58 @@
 #include <osmocom/hnodeb/llsk.h>
 #include <osmocom/hnodeb/hnb_prim.h>
 #include <osmocom/hnodeb/hnb_shutdown_fsm.h>
+
+int ll_addr_type2af(enum u_addr_type t)
+{
+	switch (t) {
+	case HNB_PRIM_ADDR_TYPE_IPV4:
+		return AF_INET;
+	case HNB_PRIM_ADDR_TYPE_IPV6:
+		return AF_INET6;
+	default:
+		LOGP(DLLSK, LOGL_ERROR, "Rx Unknwon address type %u\n", (unsigned)t);
+		return -1;
+	}
+}
+
+int ll_addr2osa(enum u_addr_type t, const union u_addr *uaddr, uint16_t port, struct osmo_sockaddr *osa)
+{
+	int af = ll_addr_type2af(t);
+
+	osa->u.sa.sa_family = af;
+
+	switch (af) {
+	case AF_INET6:
+		memcpy(&osa->u.sin6.sin6_addr, &uaddr->v6, sizeof(osa->u.sin6.sin6_addr));
+		osa->u.sin6.sin6_port = htons(port);
+		break;
+	case AF_INET:
+		memcpy(&osa->u.sin.sin_addr, &uaddr->v4, sizeof(osa->u.sin.sin_addr));
+		osa->u.sin.sin_port = htons(port);
+		break;
+	default:
+		return -1;
+	}
+	return 0;
+}
+
+enum u_addr_type osa2_ll_addr(const struct osmo_sockaddr *osa, union u_addr *uaddr, uint16_t *port)
+{
+	switch (osa->u.sa.sa_family) {
+	case AF_INET6:
+		memcpy(&uaddr->v6, &osa->u.sin6.sin6_addr, sizeof(osa->u.sin6.sin6_addr));
+		if (port)
+			*port = ntohs(osa->u.sin6.sin6_port);
+		return HNB_PRIM_ADDR_TYPE_IPV6;
+	case AF_INET:
+		memcpy(&uaddr->v4, &osa->u.sin.sin_addr, sizeof(osa->u.sin.sin_addr));
+		if (port)
+			*port = ntohs(osa->u.sin.sin_port);
+		return HNB_PRIM_ADDR_TYPE_IPV4;
+	default:
+		return HNB_PRIM_ADDR_TYPE_UNSPEC;
+	}
+}
 
 static int llsk_opened_cb(struct osmo_prim_srv *srv)
 {
@@ -73,7 +128,8 @@ bool hnb_llsk_can_be_configured(struct hnb *hnb)
 	if (!hnb->llsk)
 		return false;
 
-	if (hnb->llsk_valid_sapi_mask & (1 << HNB_PRIM_SAPI_IUH))
+	if (hnb->llsk_valid_sapi_mask & (1 << HNB_PRIM_SAPI_IUH) &&
+	    hnb->llsk_valid_sapi_mask & (1 << HNB_PRIM_SAPI_AUDIO))
 		return true;
 	return false;
 }
@@ -108,10 +164,11 @@ static int llsk_rx_cb(struct osmo_prim_srv *srv, struct osmo_prim_hdr *oph)
 	case HNB_PRIM_SAPI_IUH:
 		return llsk_rx_iuh(hnb, oph);
 	case HNB_PRIM_SAPI_GTP:
-	case HNB_PRIM_SAPI_AUDIO:
 		LOGP(DLLSK, LOGL_ERROR, "Rx SAPI %u not yet implemented (len=%u)\n",
 		     oph->sap, msgb_length(oph->msg));
 		return -EINVAL;
+	case HNB_PRIM_SAPI_AUDIO:
+		return llsk_rx_audio(hnb, oph);
 	default:
 		LOGP(DLLSK, LOGL_ERROR, "Rx for unknwon SAPI %u (len=%u)\n",
 		     oph->sap, msgb_length(oph->msg));

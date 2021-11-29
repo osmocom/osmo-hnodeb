@@ -21,11 +21,13 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <inttypes.h>
 
 #include <asn1c/asn1helpers.h>
 
 #include <osmocom/core/select.h>
 #include <osmocom/core/timer.h>
+#include <osmocom/core/socket.h>
 #include <osmocom/core/linuxlist.h>
 #include <osmocom/core/write_queue.h>
 #include <osmocom/core/logging.h>
@@ -42,6 +44,7 @@ enum {
 	DRANAP,
 	DSCTP,
 	DLLSK,
+	DRTP,
 };
 extern const struct log_info hnb_log_info;
 
@@ -55,6 +58,9 @@ struct hnb_ue {
 	struct hnb_ue_cs_ctx {
 		bool active; /* Is this chan in use? */
 		bool conn_est_cnf_pending; /* Did we send CONN_ESTABLISH_CNF to lower layers? */
+		struct {
+			struct osmo_rtp_socket *socket;
+		} rtp;
 	} conn_cs;
 	struct hnb_ue_ps_ctx {
 		bool active; /* Is this chan in use? */
@@ -86,6 +92,17 @@ struct hnb {
 	uint8_t llsk_valid_sapi_mask;
 	struct osmo_timer_list llsk_defer_configure_ind_timer;
 
+	struct {
+		unsigned int jitter_buf_ms;
+		bool jitter_adaptive;
+
+		uint16_t port_range_start;
+		uint16_t port_range_end;
+		uint16_t port_range_next;
+		int ip_dscp;
+		int priority;
+	} rtp;
+
 	uint16_t rnc_id;
 	bool registered; /* Set to true once HnbRegisterAccept was received from Iuh. rnc_id is valid iif registered==true */
 
@@ -104,3 +121,5 @@ struct hnb_ue *hnb_find_ue_by_imsi(const struct hnb *hnb, char *imsi);
 
 extern void *tall_hnb_ctx;
 extern struct hnb *g_hnb;
+
+#define LOGUE(ue, ss, lvl, fmt, args...) LOGP(ss, lvl, "UE(%" PRIu32 ") " fmt, (ue)->conn_id, ## args)
