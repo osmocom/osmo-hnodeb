@@ -129,7 +129,8 @@ bool hnb_llsk_can_be_configured(struct hnb *hnb)
 		return false;
 
 	if (hnb->llsk_valid_sapi_mask & (1 << HNB_PRIM_SAPI_IUH) &&
-	    hnb->llsk_valid_sapi_mask & (1 << HNB_PRIM_SAPI_AUDIO))
+	    hnb->llsk_valid_sapi_mask & (1 << HNB_PRIM_SAPI_AUDIO) &&
+	    hnb->llsk_valid_sapi_mask & (1 << HNB_PRIM_SAPI_GTP))
 		return true;
 	return false;
 }
@@ -164,9 +165,7 @@ static int llsk_rx_cb(struct osmo_prim_srv *srv, struct osmo_prim_hdr *oph)
 	case HNB_PRIM_SAPI_IUH:
 		return llsk_rx_iuh(hnb, oph);
 	case HNB_PRIM_SAPI_GTP:
-		LOGP(DLLSK, LOGL_ERROR, "Rx SAPI %u not yet implemented (len=%u)\n",
-		     oph->sap, msgb_length(oph->msg));
-		return -EINVAL;
+		return llsk_rx_gtp(hnb, oph);
 	case HNB_PRIM_SAPI_AUDIO:
 		return llsk_rx_audio(hnb, oph);
 	default:

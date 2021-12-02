@@ -51,6 +51,10 @@ int hnb_vty_go_parent(struct vty *vty)
 		vty->node = HNODEB_NODE;
 		vty->index = g_hnb;
 		break;
+	case GTP_NODE:
+		vty->node = HNODEB_NODE;
+		vty->index = g_hnb;
+		break;
 	case HNODEB_NODE:
 		vty->node = CONFIG_NODE;
 		vty->index = g_hnb;
@@ -281,6 +285,33 @@ DEFUN(cfg_hnodeb_llsk_path, cfg_hnodeb_llsk_path_cmd,
 	return CMD_SUCCESS;
 }
 
+static struct cmd_node gtp_node = {
+	GTP_NODE,
+	"%s(config-gtp)# ",
+	1,
+};
+
+#define GTP_STR "Configure the GPRS Tunnelling Protocol parameters\n"
+
+DEFUN(cfg_hnodeb_gtp,
+      cfg_hnodeb_gtp_cmd,
+      "gtp", GTP_STR)
+{
+	OSMO_ASSERT(g_hnb);
+	vty->index = g_hnb;
+	vty->node = GTP_NODE;
+
+	return CMD_SUCCESS;
+}
+
+DEFUN(cfg_hnodeb_gtp_local_ip, cfg_hnodeb_gtp_local_ip_cmd,
+      "local-ip " VTY_IPV4_CMD,
+      "Configure the GTP-U bind address\n"
+      "GTP-U local IPv4 address\n")
+{
+	osmo_talloc_replace_string(g_hnb, &g_hnb->gtp.cfg_local_addr, argv[0]);
+	return CMD_SUCCESS;
+}
 
 static int config_write_hnodeb(struct vty *vty)
 {
@@ -302,6 +333,8 @@ static int config_write_hnodeb(struct vty *vty)
 	vty_out(vty, "  remote-port %u%s", g_hnb->iuh.remote_port, VTY_NEWLINE);
 	vty_out(vty, " ll-socket%s", VTY_NEWLINE);
 	vty_out(vty, "  path %s%s", osmo_prim_srv_link_get_addr(g_hnb->llsk_link), VTY_NEWLINE);
+	vty_out(vty, " gtp%s", VTY_NEWLINE);
+	vty_out(vty, "  local-ip %s%s", g_hnb->gtp.cfg_local_addr, VTY_NEWLINE);
 	return CMD_SUCCESS;
 }
 
@@ -359,6 +392,9 @@ void hnb_vty_init(void)
 	install_element(HNODEB_NODE, &cfg_hnodeb_llsk_cmd);
 	install_node(&llsk_node, NULL);
 	install_element(LLSK_NODE, &cfg_hnodeb_llsk_path_cmd);
+	install_element(HNODEB_NODE, &cfg_hnodeb_gtp_cmd);
+	install_node(&gtp_node, NULL);
+	install_element(GTP_NODE, &cfg_hnodeb_gtp_local_ip_cmd);
 
 	install_element_ve(&asn_dbg_cmd);
 	install_element_ve(&ranap_reset_cmd);

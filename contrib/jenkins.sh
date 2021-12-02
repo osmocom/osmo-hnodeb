@@ -34,6 +34,7 @@ osmo-build-dep.sh libosmo-abis
 osmo-build-dep.sh libosmo-netif
 osmo-build-dep.sh libosmo-sccp
 osmo-build-dep.sh libasn1c
+osmo-build-dep.sh osmo-ggsn
 osmo-build-dep.sh osmo-iuh
 
 # Additional configure options and depends

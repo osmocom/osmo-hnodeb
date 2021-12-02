@@ -19,6 +19,7 @@ AM_CFLAGS = \
 	$(LIBOSMORUA_CFLAGS) \
 	$(LIBOSMORANAP_CFLAGS) \
 	$(LIBOSMOHNBAP_CFLAGS) \
+	$(LIBGTP_CFLAGS) \
 	$(NULL)
 
 AM_LDFLAGS = \
@@ -32,12 +33,14 @@ bin_PROGRAMS = \
 osmo_hnodeb_SOURCES = \
 	main.c \
 	debug.c \
+	gtp.c \
 	hnbap.c \
 	hnb.c \
 	hnb_shutdown_fsm.c \
 	iuh.c \
 	llsk.c \
 	llsk_audio.c \
+	llsk_gtp.c \
 	llsk_iuh.c \
 	ranap.c \
 	rtp.c \
@@ -60,4 +63,5 @@ osmo_hnodeb_LDADD = \
 	$(LIBOSMORANAP_LIBS) \
 	$(LIBOSMOHNBAP_LIBS) \
 	$(LIBSCTP_LIBS) \
+	$(LIBGTP_LIBS) \
 	$(NULL)

@@ -34,6 +34,7 @@
 #include <osmocom/hnodeb/hnb_shutdown_fsm.h>
 #include <osmocom/hnodeb/hnb_prim.h>
 #include <osmocom/hnodeb/rtp.h>
+#include <osmocom/hnodeb/gtp.h>
 
 
 struct hnb *hnb_alloc(void *tall_ctx)
@@ -58,6 +59,9 @@ struct hnb *hnb_alloc(void *tall_ctx)
 	hnb->rtp.port_range_next = hnb->rtp.port_range_start;
 	hnb->rtp.ip_dscp = -1;
 	hnb->rtp.priority = -1;
+
+	hnb->gtp.cfg_local_addr = talloc_strdup(hnb, "0.0.0.0");
+	hnb->gtp.fd1u.fd = -1;
 
 	hnb->shutdown_fi = osmo_fsm_inst_alloc(&hnb_shutdown_fsm, hnb, hnb,
 					       LOGL_INFO, NULL);
@@ -85,6 +89,11 @@ void hnb_free(struct hnb *hnb)
 	osmo_timer_del(&hnb->llsk_defer_configure_ind_timer);
 	osmo_prim_srv_link_free(hnb->llsk_link);
 	hnb->llsk_link = NULL;
+
+	if (hnb->gtp.gsn) {
+		gtp_free(hnb->gtp.gsn);
+		hnb->gtp.gsn = NULL;
+	}
 
 	talloc_free(hnb);
 }
@@ -116,6 +125,7 @@ void hnb_ue_free(struct hnb_ue *ue)
 void hnb_ue_reset_chan(struct hnb_ue *ue, bool is_ps)
 {
 	if (is_ps) {
+		hnb_ue_gtp_unbind(ue);
 		ue->conn_ps = (struct hnb_ue_ps_ctx){0};
 	} else {
 		hnb_ue_voicecall_release(ue);
@@ -134,6 +144,22 @@ struct hnb_ue *hnb_find_ue_by_id(const struct hnb *hnb, uint32_t conn_id)
 	}
 	return NULL;
 }
+
+struct hnb_ue *hnb_find_ue_by_tei(const struct hnb *hnb, uint32_t tei, bool is_remote)
+{
+	struct hnb_ue *ue;
+
+	llist_for_each_entry(ue, &hnb->ue_list, list) {
+		if (!ue->conn_ps.active)
+			continue;
+		uint32_t ue_tei = is_remote ? ue->conn_ps.remote_tei : ue->conn_ps.local_tei;
+		if (tei != ue_tei)
+			continue;
+		return ue;
+	}
+	return NULL;
+}
+
 struct hnb_ue *hnb_find_ue_by_imsi(const struct hnb *hnb, char *imsi)
 {
 	struct hnb_ue *ue;

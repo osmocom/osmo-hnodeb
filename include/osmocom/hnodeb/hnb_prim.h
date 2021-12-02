@@ -232,3 +232,71 @@ struct hnb_audio_prim {
 		struct hnb_audio_conn_data_ind_param conn_data_ind;
 	} u;
 } __attribute__ ((packed));
+
+/****************************
+ * GTP
+ ***************************/
+/*! \brief HNB_GTP primitives */
+enum hnb_gtp_prim_type {
+	HNB_GTP_PRIM_CONN_ESTABLISH,
+	HNB_GTP_PRIM_CONN_RELEASE,
+	HNB_GTP_PRIM_CONN_DATA,
+	_HNB_GTP_PRIM_MAX
+};
+
+/* HNB_GTP_PRIM_CONN_ESTABLISH, UL */
+struct hnb_gtp_conn_establish_req_param {
+	uint32_t context_id;
+	uint32_t remote_tei;
+	uint8_t spare1;
+	uint8_t remote_gtpu_address_type;
+	union u_addr remote_gtpu_addr;
+} __attribute__ ((packed));
+
+/* HNB_GTP_PRIM_CONN_ESTABLISH, DL */
+struct hnb_gtp_conn_establish_cnf_param {
+	uint32_t context_id;
+	uint32_t local_tei;
+	uint8_t error_code; /* 0 = success, !0 = failure */
+	uint8_t local_gtpu_address_type;   /* enum u_addr_type */
+	union u_addr local_gtpu_addr;
+} __attribute__ ((packed));
+
+/* HNB_GTP_PRIM_CONN_RELEASE, UL */
+struct hnb_gtp_conn_release_req_param {
+	uint32_t context_id;
+	uint32_t remote_tei;
+} __attribute__ ((packed));
+
+/* HNB_GTP_PRIM_CONN_RELEASE, DL */
+struct hnb_gtp_conn_release_ind_param {
+	uint32_t context_id;
+	uint32_t local_tei;
+} __attribute__ ((packed));
+
+/* HNB_GTP_PRIM_CONN_DATA, DL */
+struct hnb_gtp_conn_data_ind_param {
+	uint32_t context_id;
+	uint32_t local_tei;
+	uint32_t data_len; /* GTP-U payload length in bytes */
+	uint8_t data[0]; /* GTP-U payload (aka IP packet) */
+} __attribute__ ((packed));
+
+/* HNB_GTP_PRIM_CONN_DATA, UL */
+struct hnb_gtp_conn_data_req_param {
+	uint32_t context_id;
+	uint32_t remote_tei;
+	uint32_t data_len; /* GTP-U payload length in bytes */
+	uint8_t data[0]; /* GTP-U payload (aka IP packet) */
+} __attribute__ ((packed));
+
+struct hnb_gtp_prim {
+	struct osmo_prim_hdr hdr;
+	union {
+		struct hnb_gtp_conn_establish_req_param conn_establish_req;
+		struct hnb_gtp_conn_establish_cnf_param conn_establish_cnf;
+		struct hnb_gtp_conn_release_req_param conn_release_req;
+		struct hnb_gtp_conn_data_req_param conn_data_req;
+		struct hnb_gtp_conn_data_ind_param conn_data_ind;
+	} u;
+} __attribute__ ((packed));

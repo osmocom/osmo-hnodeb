@@ -57,6 +57,11 @@ static const struct log_info_cat log_cat[] = {
 		.color = "\033[1;32m",
 		.description = "RTP Core Network side",
 	},
+	[DGTP] = {
+		.name = "DGTP", .loglevel = LOGL_NOTICE, .enabled = 1,
+		.color = "\033[1;30m",
+		.description = "GPRS Tunnelling Protocol",
+	},
 };
 
 const struct log_info hnb_log_info = {

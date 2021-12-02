@@ -46,6 +46,7 @@ BuildRequires:  pkgconfig(libosmo-ranap) >= 0.8.0
 BuildRequires:  pkgconfig(libosmo-rua) >= 0.8.0
 BuildRequires:  pkgconfig(talloc)
 BuildRequires:  pkgconfig(libasn1c) >= 0.9.30
+BuildRequires:  pkgconfig(libgtp) >= 1.8.0
 %{?systemd_requires}
 
 %description

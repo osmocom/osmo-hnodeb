@@ -1,4 +1,5 @@
 noinst_HEADERS = \
+	gtp.h \
 	hnb_shutdown_fsm.h \
 	hnb_prim.h \
 	hnbap.h \

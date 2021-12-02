@@ -1,5 +1,4 @@
-/* (C) 2015 by Daniel Willmann <dwillmann@sysmocom.de>
- * (C) 2021 by sysmocom - s.f.m.c. GmbH <info@sysmocom.de>
+/* (C) 2021 by sysmocom - s.f.m.c. GmbH <info@sysmocom.de>
  * Author: Pau Espin Pedrol <pespin@sysmocom.de>
  * All Rights Reserved
  *
@@ -17,19 +16,17 @@
  * along with this program.  If not, see <http://www.gnu.org/lienses/>.
  *
  */
-
 #pragma once
 
-#include <osmocom/vty/vty.h>
-#include <osmocom/vty/buffer.h>
-#include <osmocom/vty/command.h>
+#include <osmocom/core/socket.h>
 
-enum hnb_vty_nodes {
-	HNODEB_NODE = _LAST_OSMOVTY_NODE,
-	IUH_NODE,
-	LLSK_NODE,
-	GTP_NODE,
-};
+struct hnb;
+struct hnb_ue;
 
-void hnb_vty_init(void);
-int hnb_vty_go_parent(struct vty *vty);
+int hnb_gtp_bind(struct hnb *hnb);
+void hnb_gtp_unbind(struct hnb *hnb);
+
+int hnb_ue_gtp_bind(struct hnb_ue *ue, const struct osmo_sockaddr *rem_addr, uint32_t rem_tei,
+		     struct osmo_sockaddr *loc_addr, uint32_t *loc_tei);
+int hnb_ue_gtp_unbind(struct hnb_ue *ue);
+int hnb_ue_gtp_tx(struct hnb_ue *ue, void *gtpu_payload, unsigned gtpu_payload_len);

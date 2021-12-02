@@ -51,6 +51,7 @@
 #include <osmocom/hnodeb/vty.h>
 #include <osmocom/hnodeb/hnodeb.h>
 #include <osmocom/hnodeb/iuh.h>
+#include <osmocom/hnodeb/gtp.h>
 
 static const char * const osmohnodeb_copyright =
 	"OsmoHNodeB - Osmocom 3G Home NodeB implementation\r\n"
@@ -280,6 +281,12 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
+	rc = hnb_gtp_bind(g_hnb);
+	if (rc < 0) {
+		perror("Error listening on GTP port");
+		exit(1);
+	}
+
 	rc = hnb_iuh_connect(g_hnb);
 	if (rc < 0) {
 		perror("Error connecting to Iuh port");
@@ -304,6 +311,8 @@ int main(int argc, char **argv)
 	while (!osmo_select_shutdown_done()) {
 		osmo_select_main_ctx(0);
 	}
+
+	hnb_gtp_unbind(g_hnb);
 
 	log_fini();
 
