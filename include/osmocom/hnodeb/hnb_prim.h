@@ -197,6 +197,7 @@ struct hnb_audio_conn_establish_req_param {
 /* HNB_AUDIO_PRIM_CONN_ESTABLISH, DL */
 struct hnb_audio_conn_establish_cnf_param {
 	uint32_t context_id;
+	uint32_t audio_conn_id;
 	uint16_t local_rtp_port;
 	uint8_t error_code; /* 0 = success, !0 = failure */
 	uint8_t local_rtp_address_type; /* enum u_addr_type */
@@ -205,19 +206,19 @@ struct hnb_audio_conn_establish_cnf_param {
 
 /* HNB_AUDIO_PRIM_CONN_RELEASE, UL */
 struct hnb_audio_conn_release_req_param {
-	uint32_t context_id;
+	uint32_t audio_conn_id;
 } __attribute__ ((packed));
 
 /* HNB_AUDIO_PRIM_CONN_DATA, UL */
 struct hnb_audio_conn_data_req_param {
-	uint32_t context_id;
+	uint32_t audio_conn_id;
 	uint32_t data_len; /* RTP payload length in bytes */
 	uint8_t data[0]; /* RTP payload (aka IP packet) */
 } __attribute__ ((packed));
 
 /* HNB_AUDIO_PRIM_CONN_DATA, DL */
 struct hnb_audio_conn_data_ind_param {
-	uint32_t context_id;
+	uint32_t audio_conn_id;
 	uint32_t data_len; /* RTP payload length in bytes */
 	uint8_t data[0]; /* RTP payload (aka IP packet) */
 } __attribute__ ((packed));
@@ -256,6 +257,7 @@ struct hnb_gtp_conn_establish_req_param {
 /* HNB_GTP_PRIM_CONN_ESTABLISH, DL */
 struct hnb_gtp_conn_establish_cnf_param {
 	uint32_t context_id;
+	uint32_t gtp_conn_id;
 	uint32_t local_tei;
 	uint8_t error_code; /* 0 = success, !0 = failure */
 	uint8_t local_gtpu_address_type;   /* enum u_addr_type */
@@ -264,28 +266,19 @@ struct hnb_gtp_conn_establish_cnf_param {
 
 /* HNB_GTP_PRIM_CONN_RELEASE, UL */
 struct hnb_gtp_conn_release_req_param {
-	uint32_t context_id;
-	uint32_t remote_tei;
-} __attribute__ ((packed));
-
-/* HNB_GTP_PRIM_CONN_RELEASE, DL */
-struct hnb_gtp_conn_release_ind_param {
-	uint32_t context_id;
-	uint32_t local_tei;
+	uint32_t gtp_conn_id;
 } __attribute__ ((packed));
 
 /* HNB_GTP_PRIM_CONN_DATA, DL */
 struct hnb_gtp_conn_data_ind_param {
-	uint32_t context_id;
-	uint32_t local_tei;
+	uint32_t gtp_conn_id;
 	uint32_t data_len; /* GTP-U payload length in bytes */
 	uint8_t data[0]; /* GTP-U payload (aka IP packet) */
 } __attribute__ ((packed));
 
 /* HNB_GTP_PRIM_CONN_DATA, UL */
 struct hnb_gtp_conn_data_req_param {
-	uint32_t context_id;
-	uint32_t remote_tei;
+	uint32_t gtp_conn_id;
 	uint32_t data_len; /* GTP-U payload length in bytes */
 	uint8_t data[0]; /* GTP-U payload (aka IP packet) */
 } __attribute__ ((packed));

@@ -18,7 +18,11 @@
  */
 #pragma once
 
+#include <gtp.h>
+#include <pdp.h>
+
 #include <osmocom/core/socket.h>
+#include <osmocom/core/linuxlist.h>
 
 struct hnb;
 struct hnb_ue;
@@ -26,7 +30,19 @@ struct hnb_ue;
 int hnb_gtp_bind(struct hnb *hnb);
 void hnb_gtp_unbind(struct hnb *hnb);
 
-int hnb_ue_gtp_bind(struct hnb_ue *ue, const struct osmo_sockaddr *rem_addr, uint32_t rem_tei,
-		     struct osmo_sockaddr *loc_addr, uint32_t *loc_tei);
-int hnb_ue_gtp_unbind(struct hnb_ue *ue);
-int hnb_ue_gtp_tx(struct hnb_ue *ue, void *gtpu_payload, unsigned gtpu_payload_len);
+struct gtp_conn {
+	struct llist_head list; /* Item in struct hnb->ue_list */
+	struct hnb_ue *ue; /* backpointer */
+	uint32_t id;
+	struct osmo_sockaddr loc_addr;
+	struct osmo_sockaddr rem_addr;
+	uint32_t loc_tei;
+	uint32_t rem_tei;
+	struct pdp_t *pdp_lib;
+};
+
+struct gtp_conn *gtp_conn_alloc(struct hnb_ue *ue);
+void gtp_conn_free(struct gtp_conn *conn);
+
+int gtp_conn_setup(struct gtp_conn *conn, const struct osmo_sockaddr *rem_addr, uint32_t rem_tei);
+int gtp_conn_tx(struct gtp_conn *conn, void *gtpu_payload, unsigned gtpu_payload_len);

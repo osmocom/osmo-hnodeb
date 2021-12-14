@@ -19,9 +19,21 @@
 #pragma once
 
 #include <osmocom/core/socket.h>
+#include <osmocom/core/linuxlist.h>
 
 struct hnb;
 struct hnb_ue;
 
-int hnb_ue_voicecall_setup(struct hnb_ue *ue, const struct osmo_sockaddr *rem_addr, struct osmo_sockaddr *loc_addr);
-int hnb_ue_voicecall_release(struct hnb_ue *ue);
+struct rtp_conn {
+	struct llist_head list; /* Item in struct hnb->ue_list */
+	struct hnb_ue *ue; /* backpointer */
+	uint32_t id;
+	struct osmo_rtp_socket *socket;
+	struct osmo_sockaddr loc_addr;
+	struct osmo_sockaddr rem_addr;
+};
+
+struct rtp_conn *rtp_conn_alloc(struct hnb_ue *ue);
+void rtp_conn_free(struct rtp_conn *conn);
+
+int rtp_conn_setup(struct rtp_conn *conn, const struct osmo_sockaddr *rem_addr);

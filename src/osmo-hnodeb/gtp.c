@@ -27,8 +27,38 @@
 #include <gtp.h>
 #include <pdp.h>
 
+static uint32_t next_gtp_conn_id = 0;
+
+struct gtp_conn *gtp_conn_alloc(struct hnb_ue *ue)
+{
+	struct gtp_conn *conn;
+
+	conn = talloc_zero(ue, struct gtp_conn);
+	if (!conn)
+		return NULL;
+
+	conn->ue = ue;
+
+	llist_add(&conn->list, &ue->conn_ps.conn_list);
+
+	return conn;
+}
+
+void gtp_conn_free(struct gtp_conn *conn)
+{
+	if (!conn)
+		return;
+
+	if (conn->pdp_lib) {
+		pdp_freepdp(conn->pdp_lib);
+		conn->pdp_lib = NULL;
+	}
+	llist_del(&conn->list);
+	talloc_free(conn);
+}
+
 /* Get osa of locally bound GTP-U socket */
-int sk_get_bound_addr(int fd, struct osmo_sockaddr *osa)
+static int sk_get_bound_addr(int fd, struct osmo_sockaddr *osa)
 {
 	int rc;
 	socklen_t alen = sizeof(*osa);
@@ -44,19 +74,21 @@ int sk_get_bound_addr(int fd, struct osmo_sockaddr *osa)
 static int hnb_gtp_cb_data_ind(struct pdp_t *lib, void *packet, unsigned int len)
 {
 	struct hnb_gtp_prim *gtp_prim;
-	struct hnb_ue *ue = lib->priv;
+	struct gtp_conn *conn = lib->priv;
+	struct hnb_ue *ue;
 	struct hnb *hnb;
 	int rc;
 
-	if (!ue || !ue->conn_ps.active) {
-		LOGP(DGTP, LOGL_NOTICE, "Tx GTP-CONN_DATA.ind data=%p len=%u but UE conn_ps is not active!\n",
+	if (!conn || !conn->ue->conn_ps.active) {
+		LOGUE(conn->ue, DGTP, LOGL_NOTICE, "Tx GTP-CONN_DATA.ind data=%p len=%u but UE conn_ps is not active!\n",
 		      packet, len);
 		return -EINVAL;
 	}
+	ue = conn->ue;
 	hnb = ue->hnb;
 
 	LOGUE(ue, DGTP, LOGL_DEBUG, "Tx GTP-CONN_DATA.ind data=%p len=%u\n", packet, len);
-	gtp_prim = hnb_gtp_makeprim_conn_data_ind(ue->conn_id, ue->conn_ps.local_tei, packet, len);
+	gtp_prim = hnb_gtp_makeprim_conn_data_ind(conn->id, packet, len);
 	if ((rc = osmo_prim_srv_send(hnb->llsk, gtp_prim->hdr.msg)) < 0) {
 		LOGUE(ue, DGTP, LOGL_ERROR, "Failed Tx GTP-CONN_DATA.ind data=%p len=%u\n",
 		      packet, len);
@@ -130,10 +162,10 @@ void hnb_gtp_unbind(struct hnb *hnb)
 	hnb->gtp.fd1u.fd = -1;
 }
 
-int hnb_ue_gtp_bind(struct hnb_ue *ue, const struct osmo_sockaddr *rem_addr, uint32_t rem_tei,
-		     struct osmo_sockaddr *loc_addr, uint32_t *loc_tei)
+int gtp_conn_setup(struct gtp_conn *conn, const struct osmo_sockaddr *rem_addr, uint32_t rem_tei)
 {
 	int rc;
+	struct hnb_ue *ue = conn->ue;
 	struct hnb *hnb = ue->hnb;
 	struct pdp_t *pdp;
 	struct in_addr rem_in;
@@ -147,15 +179,18 @@ int hnb_ue_gtp_bind(struct hnb_ue *ue, const struct osmo_sockaddr *rem_addr, uin
 		return -ENOTSUP;
 	}
 
+	conn->rem_addr = *rem_addr;
+	conn->rem_tei = rem_tei;
 	rem_in = rem_addr->u.sin.sin_addr;
+	conn->id = next_gtp_conn_id++; /* TODO: validate next one is not already taken due to wrap-around */
 
-	rc = gtp_pdp_newpdp(hnb->gtp.gsn, &pdp, ue->conn_id, 0 /* TODO: NSAPI? */, NULL);
+	rc = gtp_pdp_newpdp(hnb->gtp.gsn, &pdp, conn->id, 0 /* TODO: NSAPI? */, NULL);
 	if (rc < 0) {
 		LOGUE(ue, DGTP, LOGL_ERROR, "Failed creating PDP context: %s\n", strerror(-rc));
 		return rc;
 	}
-	pdp->priv = ue;
-	ue->conn_ps.pdp_lib = pdp;
+	pdp->priv = conn;
+	conn->pdp_lib = pdp;
 
 	pdp->teid_gn = rem_tei;
 	pdp->version = 1;
@@ -170,40 +205,32 @@ int hnb_ue_gtp_bind(struct hnb_ue *ue, const struct osmo_sockaddr *rem_addr, uin
 	memcpy(pdp->gsnlu.v, &hnb->gtp.local_addr.u.sin.sin_addr,
 	       sizeof(hnb->gtp.local_addr.u.sin.sin_addr));
 
-	*loc_addr = hnb->gtp.local_addr;
+	conn->loc_addr = hnb->gtp.local_addr;
 	//loc_addr->u.sin.sin_family = AF_INET;
 	//loc_addr->u.sin.sin_addr = hnb->gtp.gsn->gsnu;
 	//loc_addr->u.sin.sin_port = GTP1U_PORT;
-	*loc_tei = pdp->teid_own;
+	conn->loc_tei = pdp->teid_own;
 	return 0;
 }
 
-int hnb_ue_gtp_tx(struct hnb_ue *ue, void *gtpu_payload, unsigned gtpu_payload_len)
+int gtp_conn_tx(struct gtp_conn *conn, void *gtpu_payload, unsigned gtpu_payload_len)
 {
 	int rc;
+	struct hnb_ue *ue;
 	struct hnb *hnb;
 
-	if (!ue || !ue->conn_ps.pdp_lib) {
-		LOGUE(ue, DGTP, LOGL_ERROR, "Tx: UE PDP Ctx not available\n");
+	if (!conn || !conn->pdp_lib) {
+		LOGP(DGTP, LOGL_ERROR, "Tx: PDP Ctx not available\n");
 		return -EINVAL;
 	}
 
+	ue = conn->ue;
 	hnb = ue->hnb;
 	if (!hnb->gtp.gsn) {
 		LOGUE(ue, DGTP, LOGL_ERROR, "Tx: GTP socket not bound\n");
 		return -EINVAL;
 	}
 
-	rc = gtp_data_req(hnb->gtp.gsn, ue->conn_ps.pdp_lib, gtpu_payload, gtpu_payload_len);
+	rc = gtp_data_req(hnb->gtp.gsn, conn->pdp_lib, gtpu_payload, gtpu_payload_len);
 	return rc;
-}
-
-int hnb_ue_gtp_unbind(struct hnb_ue *ue)
-{
-	if (!ue->conn_ps.pdp_lib)
-		return -EINVAL;
-
-	pdp_freepdp(ue->conn_ps.pdp_lib);
-	ue->conn_ps.pdp_lib = NULL;
-	return 0;
 }

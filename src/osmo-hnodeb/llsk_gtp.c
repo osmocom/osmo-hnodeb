@@ -79,14 +79,16 @@ static struct hnb_gtp_prim *hnb_gtp_prim_alloc(enum hnb_gtp_prim_type ptype, enu
 	return (struct hnb_gtp_prim *)oph;
 }
 
-static struct hnb_gtp_prim *hnb_gtp_makeprim_conn_establish_cnf(uint32_t context_id, uint8_t error_code,
-								uint32_t local_tei, uint8_t local_gtpu_address_type,
+static struct hnb_gtp_prim *hnb_gtp_makeprim_conn_establish_cnf(uint32_t context_id, uint32_t gtp_conn_id,
+								uint8_t error_code, uint32_t local_tei,
+								uint8_t local_gtpu_address_type,
 								const union u_addr *local_gtpu_addr)
 {
 	struct hnb_gtp_prim *gtp_prim;
 
 	gtp_prim = hnb_gtp_prim_alloc(HNB_GTP_PRIM_CONN_ESTABLISH, PRIM_OP_CONFIRM, 0);
 	gtp_prim->u.conn_establish_cnf.context_id = context_id;
+	gtp_prim->u.conn_establish_cnf.gtp_conn_id = gtp_conn_id;
 	gtp_prim->u.conn_establish_cnf.local_tei = local_tei;
 	gtp_prim->u.conn_establish_cnf.error_code = error_code;
 	gtp_prim->u.conn_establish_cnf.local_gtpu_address_type = local_gtpu_address_type;
@@ -96,14 +98,12 @@ static struct hnb_gtp_prim *hnb_gtp_makeprim_conn_establish_cnf(uint32_t context
 	return gtp_prim;
 }
 
-struct hnb_gtp_prim *hnb_gtp_makeprim_conn_data_ind(uint32_t context_id, uint32_t local_tei,
-						    const uint8_t *data, uint32_t data_len)
+struct hnb_gtp_prim *hnb_gtp_makeprim_conn_data_ind(uint32_t gtp_conn_id, const uint8_t *data, uint32_t data_len)
 {
 	struct hnb_gtp_prim *gtp_prim;
 
 	gtp_prim = hnb_gtp_prim_alloc(HNB_GTP_PRIM_CONN_DATA, PRIM_OP_INDICATION, data_len);
-	gtp_prim->u.conn_data_ind.context_id = context_id;
-	gtp_prim->u.conn_data_ind.local_tei = local_tei;
+	gtp_prim->u.conn_data_ind.gtp_conn_id = gtp_conn_id;
 	gtp_prim->u.conn_data_ind.data_len = data_len;
 	if (data_len) {
 		msgb_put(gtp_prim->hdr.msg, data_len);
@@ -119,7 +119,7 @@ static int _send_conn_establish_cnf_failed(struct hnb *hnb, uint32_t context_id,
 	int rc;
 	LOGP(DLLSK, LOGL_ERROR, "Tx GTP-CONN_ESTABLISH.cnf: ctx=%u error_code=%u\n",
 	     context_id, error_code);
-	gtp_prim = hnb_gtp_makeprim_conn_establish_cnf(context_id, error_code, 0, HNB_PRIM_ADDR_TYPE_UNSPEC, NULL);
+	gtp_prim = hnb_gtp_makeprim_conn_establish_cnf(context_id, 0, error_code, 0, HNB_PRIM_ADDR_TYPE_UNSPEC, NULL);
 	if ((rc = osmo_prim_srv_send(hnb->llsk, gtp_prim->hdr.msg)) < 0) {
 		LOGP(DLLSK, LOGL_ERROR, "Failed sending GTP-CONN_ESTABLISH.cnf context_id=%u error_code=%u\n",
 		     context_id, error_code);
@@ -135,9 +135,8 @@ static int llsk_rx_gtp_conn_establish_req(struct hnb *hnb, struct hnb_gtp_conn_e
 	int af;
 	char rem_addrstr[INET6_ADDRSTRLEN+32];
 	struct osmo_sockaddr rem_osa = {0};
-	struct osmo_sockaddr loc_osa = {0};
 	union u_addr loc_uaddr = {0};
-	uint32_t loc_tei;
+	struct gtp_conn *conn = NULL;
 
 	rc = ll_addr2osa(ce_req->remote_gtpu_address_type, &ce_req->remote_gtpu_addr, GTP1U_PORT, &rem_osa);
 	if (rc < 0) {
@@ -169,14 +168,15 @@ static int llsk_rx_gtp_conn_establish_req(struct hnb *hnb, struct hnb_gtp_conn_e
 	}
 
 	/* Create the socket: */
-	if ((rc = hnb_ue_gtp_bind(ue, &rem_osa, ce_req->remote_tei, &loc_osa, &loc_tei)) < 0) {
+	conn = gtp_conn_alloc(ue);
+	if ((rc = gtp_conn_setup(conn, &rem_osa, ce_req->remote_tei)) < 0) {
 		LOGUE(ue, DLLSK, LOGL_ERROR, "Rx GTP-CONN_ESTABLISH.req: Failed to set up gtp socket rem_tei=%u rem_addr=%s\n",
 		     ce_req->remote_tei, rem_addrstr);
 		return _send_conn_establish_cnf_failed(hnb, ce_req->context_id, 4);
 	}
 
 	/* Convert resulting local address back to LLSK format: */
-	if (osa2_ll_addr(&loc_osa, &loc_uaddr,  NULL) != ce_req->remote_gtpu_address_type) {
+	if (osa2_ll_addr(&conn->loc_addr, &loc_uaddr,  NULL) != ce_req->remote_gtpu_address_type) {
 		LOGUE(ue, DLLSK, LOGL_ERROR, "Rx GTP-CONN_ESTABLISH.req: Failed to provide proper local address rem_addr=%s\n",
 		      rem_addrstr);
 		rc = _send_conn_establish_cnf_failed(hnb, ce_req->context_id, 4);
@@ -185,56 +185,53 @@ static int llsk_rx_gtp_conn_establish_req(struct hnb *hnb, struct hnb_gtp_conn_e
 
 	/* Submit successful confirmation */
 	LOGUE(ue, DLLSK, LOGL_INFO, "Tx GTP-CONN_ESTABLISH.cnf: error_code=0 rem_addr=%s rem_tei=%u loc_addr=%s local_tei=%u\n",
-	     rem_addrstr, ce_req->remote_tei, osmo_sockaddr_to_str(&loc_osa), loc_tei);
-	gtp_prim = hnb_gtp_makeprim_conn_establish_cnf(ce_req->context_id, 0, loc_tei, ce_req->remote_gtpu_address_type, &loc_uaddr);
+	     rem_addrstr, ce_req->remote_tei, osmo_sockaddr_to_str(&conn->loc_addr), conn->loc_tei);
+	gtp_prim = hnb_gtp_makeprim_conn_establish_cnf(ce_req->context_id, conn->id, 0, conn->loc_tei,
+						       ce_req->remote_gtpu_address_type, &loc_uaddr);
 	if ((rc = osmo_prim_srv_send(hnb->llsk, gtp_prim->hdr.msg)) < 0) {
 		LOGUE(ue, DLLSK, LOGL_ERROR, "Failed sending GTP-CONN_ESTABLISH.cnf error_code=0\n");
 		goto release_sock;
 	}
-
-	ue->conn_ps.local_tei = loc_tei;
-	ue->conn_ps.remote_tei = ce_req->remote_tei;
-
 	return rc;
 release_sock:
-	hnb_ue_gtp_unbind(ue);
+	gtp_conn_free(conn);
 	return rc;
 }
 
 static int llsk_rx_gtp_conn_release_req(struct hnb *hnb, struct hnb_gtp_conn_release_req_param *rel_req)
 {
-	struct hnb_ue *ue;
+	struct gtp_conn *conn;
 	int rc = 0;
 
-	LOGP(DLLSK, LOGL_DEBUG, "Rx GTP-CONN_RELEASE.req ctx=%u\n", rel_req->context_id);
+	LOGP(DLLSK, LOGL_DEBUG, "Rx GTP-CONN_RELEASE.req id=%u\n", rel_req->gtp_conn_id);
 
-	ue = hnb_find_ue_by_id(hnb, rel_req->context_id);
-	if (!ue) {
-		LOGP(DLLSK, LOGL_ERROR, "Rx GTP-CONN_RELEASE.req: UE not found! ctx=%u\n",
-		     rel_req->context_id);
+	conn = hnb_find_gtp_conn_by_id(hnb, rel_req->gtp_conn_id);
+	if (!conn) {
+		LOGP(DLLSK, LOGL_ERROR, "Rx GTP-CONN_RELEASE.req: GTP conn not found! id=%u\n",
+		     rel_req->gtp_conn_id);
 		return -EINVAL;
 	}
 	/* release GTP pdp ctx: */
-	hnb_ue_gtp_unbind(ue);
+	gtp_conn_free(conn);
 	return rc;
 }
 
 static int llsk_rx_gtp_conn_data_req(struct hnb *hnb, struct hnb_gtp_conn_data_req_param *data_req)
 {
-	struct hnb_ue *ue;
+	struct gtp_conn *conn;
 	int rc = 0;
 
-	LOGP(DLLSK, LOGL_DEBUG, "Rx GTP-CONN_DATA.req ctx=%u rem_tei=%u data_len=%u\n",
-	     data_req->context_id, data_req->remote_tei, data_req->data_len);
+	LOGP(DLLSK, LOGL_DEBUG, "Rx GTP-CONN_DATA.req id=%u data_len=%u\n",
+	     data_req->gtp_conn_id, data_req->data_len);
 
-	ue = hnb_find_ue_by_id(hnb, data_req->context_id);
-	if (!ue) {
-		LOGP(DLLSK, LOGL_ERROR, "Rx GTP-CONN_DATA.req: UE not found! ctx=%u data_len=%u\n",
-		     data_req->context_id, data_req->data_len);
+	conn = hnb_find_gtp_conn_by_id(hnb, data_req->gtp_conn_id);
+	if (!conn) {
+		LOGP(DLLSK, LOGL_ERROR, "Rx GTP-CONN_DATA.req: GTP conn not found! id=%u data_len=%u\n",
+		     data_req->gtp_conn_id, data_req->data_len);
 		return -EINVAL;
 	}
 
-	rc = hnb_ue_gtp_tx(ue, data_req->data, data_req->data_len);
+	rc = gtp_conn_tx(conn, data_req->data, data_req->data_len);
 	return rc;
 }
 

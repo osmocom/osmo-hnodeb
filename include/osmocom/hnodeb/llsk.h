@@ -27,7 +27,7 @@
 #include <osmocom/hnodeb/hnb_prim.h>
 
 struct hnb;
-struct hnb_ue;
+struct rtp_conn;
 
 int hnb_llsk_alloc(struct hnb *hnb);
 bool hnb_llsk_connected(const struct hnb *hnb);
@@ -53,9 +53,8 @@ struct hnb_iuh_prim *hnb_iuh_makeprim_unitdata_ind(const uint8_t *data, uint32_t
 
 extern const struct value_string hnb_audio_prim_type_names[];
 int llsk_rx_audio(struct hnb *hnb, struct osmo_prim_hdr *oph);
-int llsk_audio_tx_conn_data_ind(struct hnb_ue *ue, const uint8_t *payload, uint32_t len);
+int llsk_audio_tx_conn_data_ind(struct rtp_conn *conn, const uint8_t *payload, uint32_t len);
 
 extern const struct value_string hnb_gtp_prim_type_names[];
 int llsk_rx_gtp(struct hnb *hnb, struct osmo_prim_hdr *oph);
-struct hnb_gtp_prim *hnb_gtp_makeprim_conn_data_ind(uint32_t context_id, uint32_t local_tei,
-						    const uint8_t *data, uint32_t data_len);
+struct hnb_gtp_prim *hnb_gtp_makeprim_conn_data_ind(uint32_t gtp_conn_id, const uint8_t *data, uint32_t data_len);

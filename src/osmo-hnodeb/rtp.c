@@ -27,6 +27,33 @@
 #include <osmocom/hnodeb/rtp.h>
 #include <osmocom/hnodeb/hnodeb.h>
 
+struct rtp_conn *rtp_conn_alloc(struct hnb_ue *ue)
+{
+	struct rtp_conn *conn;
+
+	conn = talloc_zero(ue, struct rtp_conn);
+	if (!conn)
+		return NULL;
+
+	conn->ue = ue;
+
+	llist_add(&conn->list, &ue->conn_cs.conn_list);
+
+	return conn;
+}
+
+void rtp_conn_free(struct rtp_conn *conn)
+{
+	if (!conn)
+		return;
+
+	if (conn->socket) {
+		osmo_rtp_socket_free(conn->socket);
+		conn->socket = NULL;
+	}
+	llist_del(&conn->list);
+	talloc_free(conn);
+}
 
 /* Mixture between osmo_rtp_get_bound_addr and osmo_rtp_get_bound_ip_port using osmo_sockaddr */
 /*static int rtp_get_bound_addr(struct osmo_rtp_socket *rs, struct osmo_sockaddr *osa)
@@ -97,11 +124,13 @@ static int rtp_bind(struct hnb *hnb, struct osmo_rtp_socket *rs, const char *ip)
 
 	tries = (hnb->rtp.port_range_end - hnb->rtp.port_range_start) / 2;
 	for (i = 0; i < tries; i++) {
+		uint16_t port;
 
 		if (hnb->rtp.port_range_next >= hnb->rtp.port_range_end)
 			hnb->rtp.port_range_next = hnb->rtp.port_range_start;
 
-		rc = osmo_rtp_socket_bind(rs, ip, hnb->rtp.port_range_next);
+		port = hnb->rtp.port_range_next;
+		rc = osmo_rtp_socket_bind(rs, ip, port);
 
 		hnb->rtp.port_range_next += 2;
 
@@ -118,7 +147,7 @@ static int rtp_bind(struct hnb *hnb, struct osmo_rtp_socket *rs, const char *ip)
 				LOGP(DRTP, LOGL_ERROR, "failed to set socket priority %d: %s\n",
 					hnb->rtp.priority, strerror(errno));
 		}
-		return 0;
+		return port;
 	}
 
 	return -1;
@@ -128,14 +157,14 @@ static void rtp_rx_cb(struct osmo_rtp_socket *rs, const uint8_t *rtp_pl,
 	       unsigned int rtp_pl_len, uint16_t seq_number,
 	       uint32_t timestamp, bool marker)
 {
-	struct hnb_ue *ue = (struct hnb_ue *)rs->priv;
+	struct rtp_conn *conn = (struct rtp_conn *)rs->priv;
 
-	LOGUE(ue, DRTP, LOGL_DEBUG, "Rx RTP seq=%u ts=%u M=%u pl=%p len=%u\n",
+	LOGUE(conn->ue, DRTP, LOGL_DEBUG, "Rx RTP seq=%u ts=%u M=%u pl=%p len=%u\n",
 	      seq_number, timestamp, marker, rtp_pl, rtp_pl_len);
-	llsk_audio_tx_conn_data_ind(ue, rtp_pl, rtp_pl_len);
+	llsk_audio_tx_conn_data_ind(conn, rtp_pl, rtp_pl_len);
 }
 
-int hnb_ue_voicecall_setup(struct hnb_ue *ue, const struct osmo_sockaddr *rem_addr, struct osmo_sockaddr *loc_addr)
+int rtp_conn_setup(struct rtp_conn *conn, const struct osmo_sockaddr *rem_addr)
 {
 	int rc;
 	char cname[256+4];
@@ -144,6 +173,7 @@ int hnb_ue_voicecall_setup(struct hnb_ue *ue, const struct osmo_sockaddr *rem_ad
 	const char *local_wildcard_ipstr = "0.0.0.0";
 	char remote_ipstr[INET6_ADDRSTRLEN];
 	uint16_t remote_port;
+	struct hnb_ue *ue = conn->ue;
 	struct hnb *hnb = ue->hnb;
 
 	if (osmo_sockaddr_to_str_and_uint(remote_ipstr, sizeof(remote_ipstr), &remote_port, &rem_addr->u.sa) == 0) {
@@ -151,12 +181,9 @@ int hnb_ue_voicecall_setup(struct hnb_ue *ue, const struct osmo_sockaddr *rem_ad
 		return -EINVAL;
 	}
 
-	if (ue->conn_cs.rtp.socket) {
-		LOGUE(ue, DRTP, LOGL_ERROR, "Setting up rtp socket but it already exists!\n");
-		return -EINVAL;
-	}
+	conn->rem_addr = *rem_addr;
 
-	rs = ue->conn_cs.rtp.socket = osmo_rtp_socket_create(ue, 0);
+	rs = conn->socket = osmo_rtp_socket_create(ue, 0);
 	rc = osmo_rtp_socket_set_param(rs,
 				       hnb->rtp.jitter_adaptive ?
 				       OSMO_RTP_P_JIT_ADAP :
@@ -166,7 +193,7 @@ int hnb_ue_voicecall_setup(struct hnb_ue *ue, const struct osmo_sockaddr *rem_ad
 		LOGUE(ue, DRTP, LOGL_ERROR, "Failed to set RTP socket parameters: %s\n", strerror(-rc));
 		goto free_ret;
 	}
-	rs->priv = ue;
+	rs->priv = conn;
 	rs->rx_cb = &rtp_rx_cb;
 
 	rc = rtp_bind(hnb, rs, local_wildcard_ipstr);
@@ -174,10 +201,11 @@ int hnb_ue_voicecall_setup(struct hnb_ue *ue, const struct osmo_sockaddr *rem_ad
 		LOGUE(ue, DRTP, LOGL_ERROR, "Failed to bind RTP/RTCP sockets\n");
 		goto free_ret;
 	}
+	conn->id = rc; /* We use local port as rtp conn ID */
 
 	/* Ensure RTCP SDES contains some useful information */
 	snprintf(cname, sizeof(cname), "hnb@%s", local_wildcard_ipstr);
-	snprintf(name, sizeof(name), "ue@%u", ue->conn_id);
+	snprintf(name, sizeof(name), "ue@%u-%u", conn->ue->conn_id, conn->id);
 	osmo_rtp_set_source_desc(rs, cname, name, NULL, NULL, NULL,
 				 "OsmoHNodeB-" PACKAGE_VERSION, NULL);
 
@@ -188,8 +216,8 @@ int hnb_ue_voicecall_setup(struct hnb_ue *ue, const struct osmo_sockaddr *rem_ad
 	}
 
 	/* osmo_rtp_socket_connect() is broken, OS#5356 */
-	//rc = rtp_get_bound_addr(rs, loc_addr);
-	rc = rtp_get_bound_addr(rs, rem_addr, loc_addr);
+	//rc = rtp_get_bound_addr(rs, &conn->loc_addr);
+	rc = rtp_get_bound_addr(rs, rem_addr, &conn->loc_addr);
 	if (rc < 0) {
 		LOGUE(ue, DRTP, LOGL_ERROR, "Cannot obtain locally bound IP/port: %d\n", rc);
 		goto free_ret;
@@ -197,16 +225,7 @@ int hnb_ue_voicecall_setup(struct hnb_ue *ue, const struct osmo_sockaddr *rem_ad
 
 	return rc;
 free_ret:
-	osmo_rtp_socket_free(ue->conn_cs.rtp.socket);
-	ue->conn_cs.rtp.socket = NULL;
+	osmo_rtp_socket_free(conn->socket);
+	conn->socket = NULL;
 	return rc;
-}
-
-int hnb_ue_voicecall_release(struct hnb_ue *ue)
-{
-	if (!ue->conn_cs.rtp.socket)
-		return -EINVAL;
-	osmo_rtp_socket_free(ue->conn_cs.rtp.socket);
-	ue->conn_cs.rtp.socket = NULL;
-	return 0;
 }

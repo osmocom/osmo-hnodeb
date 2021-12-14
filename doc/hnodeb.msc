@@ -43,19 +43,19 @@ msc {
 	---  [ label = "Subscriber set up PS data:" ];
 	hnodeb <= hnbgw [label="RANAP RAB-Assignment Request(TEI, ADDR)"];
 	trx <= hnodeb [label="IUH-CONN_DATA.ind[RANAP RAB-Assignment Request(remote_ip, remote_port, remote_tei)]"];
-	trx => hnodeb [label="GTP-CONN_ESTABLISH.req(remote_ip,remote_port,remote_tei)"];
+	trx => hnodeb [label="GTP-CONN_ESTABLISH.req(context_id,remote_ip,remote_port,remote_tei)"];
 	...  [ label = "HnodeB sets up GTP-U connection" ];
-	trx <= hnodeb [label="GTP-CONN_ESTABLISH.cnf(local_ip,local_port,local_tei,remote_tei)"];
+	trx <= hnodeb [label="GTP-CONN_ESTABLISH.cnf(context_id,gtp_conn_id,local_ip,local_port,local_tei)"];
 	|||;
 	...;
 	|||;
 	|||;
 	---  [ label = "PS data transmission over GTP-U:" ];
 	ue => trx [label="..."];
-	trx => hnodeb [label="GTP-CONN_DATA.req[remote_tei,payload]"];
+	trx => hnodeb [label="GTP-CONN_DATA.req[gtp_conn_id,payload]"];
 	hnodeb => ggsn [label="GTP-U(remote_tei, local_addr, remote_addr, payload)"];
 	hnodeb <= ggsn [label="GTP-U(local_tei, remote_addr, local_addr, payload)"];
-	trx <= hnodeb [label="GTP-CONN_DATA.ind[local_tei,payload]"];
+	trx <= hnodeb [label="GTP-CONN_DATA.ind[gtp_conn_id,payload]"];
 	ue <= trx [label="..."];
 	|||;
 	...;
@@ -67,7 +67,7 @@ msc {
 	hnodeb <= hnbgw [label="RANAP IU Release Command"];
 	trx <= hnodeb [label="IUH-CONN_DATA.ind[RANAP IU Release Command]"];
 	...;
-	trx => hnodeb [label="GTP-CONN_RELEASE.req(remote_tei)"];
+	trx => hnodeb [label="GTP-CONN_RELEASE.req(gtp_conn_id)"];
 
 	trx => hnodeb [label="IUH-CONN_RELEASE.req[RANAP IU Release Complete]"];
 	hnodeb => hnbgw [label="RUA-Disconnect(RANAP IU Release Complete)"];

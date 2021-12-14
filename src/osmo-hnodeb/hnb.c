@@ -109,6 +109,9 @@ struct hnb_ue *hnb_ue_alloc(struct hnb *hnb, uint32_t conn_id)
 	ue->hnb = hnb;
 	ue->conn_id = conn_id;
 
+	INIT_LLIST_HEAD(&ue->conn_cs.conn_list);
+	INIT_LLIST_HEAD(&ue->conn_ps.conn_list);
+
 	llist_add(&ue->list, &hnb->ue_list);
 
 	return ue;
@@ -125,11 +128,17 @@ void hnb_ue_free(struct hnb_ue *ue)
 void hnb_ue_reset_chan(struct hnb_ue *ue, bool is_ps)
 {
 	if (is_ps) {
-		hnb_ue_gtp_unbind(ue);
+		struct gtp_conn *conn, *conn_tmp;
+		llist_for_each_entry_safe(conn, conn_tmp, &ue->conn_ps.conn_list, list)
+			gtp_conn_free(conn);
 		ue->conn_ps = (struct hnb_ue_ps_ctx){0};
+		INIT_LLIST_HEAD(&ue->conn_ps.conn_list);
 	} else {
-		hnb_ue_voicecall_release(ue);
+		struct rtp_conn *conn, *conn_tmp;
+		llist_for_each_entry_safe(conn, conn_tmp, &ue->conn_cs.conn_list, list)
+			rtp_conn_free(conn);
 		ue->conn_cs = (struct hnb_ue_cs_ctx){0};
+		INIT_LLIST_HEAD(&ue->conn_cs.conn_list);
 	}
 }
 
@@ -139,21 +148,6 @@ struct hnb_ue *hnb_find_ue_by_id(const struct hnb *hnb, uint32_t conn_id)
 
 	llist_for_each_entry(ue, &hnb->ue_list, list) {
 		if (ue->conn_id != conn_id)
-			continue;
-		return ue;
-	}
-	return NULL;
-}
-
-struct hnb_ue *hnb_find_ue_by_tei(const struct hnb *hnb, uint32_t tei, bool is_remote)
-{
-	struct hnb_ue *ue;
-
-	llist_for_each_entry(ue, &hnb->ue_list, list) {
-		if (!ue->conn_ps.active)
-			continue;
-		uint32_t ue_tei = is_remote ? ue->conn_ps.remote_tei : ue->conn_ps.local_tei;
-		if (tei != ue_tei)
 			continue;
 		return ue;
 	}
@@ -173,6 +167,38 @@ struct hnb_ue *hnb_find_ue_by_imsi(const struct hnb *hnb, char *imsi)
 		if (strncmp(&ue->imsi[0], imsi, ARRAY_SIZE(ue->imsi)) != 0)
 			continue;
 		return ue;
+	}
+	return NULL;
+}
+
+struct rtp_conn *hnb_find_rtp_conn_by_id(const struct hnb *hnb, uint32_t audio_conn_id)
+{
+	struct hnb_ue *ue;
+
+	llist_for_each_entry(ue, &hnb->ue_list, list) {
+		struct rtp_conn *conn;
+		if (!ue->conn_cs.active)
+			continue;
+		llist_for_each_entry(conn, &ue->conn_cs.conn_list, list) {
+			if (conn->id == audio_conn_id)
+				return conn;
+		}
+	}
+	return NULL;
+}
+
+struct gtp_conn *hnb_find_gtp_conn_by_id(const struct hnb *hnb, uint32_t gtp_conn_id)
+{
+	struct hnb_ue *ue;
+
+	llist_for_each_entry(ue, &hnb->ue_list, list) {
+		struct gtp_conn *conn;
+		if (!ue->conn_ps.active)
+			continue;
+		llist_for_each_entry(conn, &ue->conn_ps.conn_list, list) {
+			if (conn->id == gtp_conn_id)
+				return conn;
+		}
 	}
 	return NULL;
 }
