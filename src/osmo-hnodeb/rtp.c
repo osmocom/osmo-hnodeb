@@ -193,6 +193,14 @@ int rtp_conn_setup(struct rtp_conn *conn, const struct osmo_sockaddr *rem_addr)
 		LOGUE(ue, DRTP, LOGL_ERROR, "Failed to set RTP socket parameters: %s\n", strerror(-rc));
 		goto free_ret;
 	}
+	/* TS 25.414 Section 5.1.3.3.1.6: A dynamic Payload Type (IETF RFC 1890
+	 * [23]) shall be used. Values in the Range between 96 and 127 shall be
+	 * used. The value shall be ignored in the receiving entity. */
+	rc = osmo_rtp_socket_set_pt(rs, 96);
+	if (rc < 0) {
+		LOGUE(ue, DRTP, LOGL_ERROR, "Failed to set RTP socket Payload-Type 96\n");
+		/* Continue, the other side is anyway ignoring it... */
+	}
 	rs->priv = conn;
 	rs->rx_cb = &rtp_rx_cb;
 
