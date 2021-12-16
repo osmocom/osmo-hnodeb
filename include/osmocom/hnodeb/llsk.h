@@ -53,7 +53,8 @@ struct hnb_iuh_prim *hnb_iuh_makeprim_unitdata_ind(const uint8_t *data, uint32_t
 
 extern const struct value_string hnb_audio_prim_type_names[];
 int llsk_rx_audio(struct hnb *hnb, struct osmo_prim_hdr *oph);
-int llsk_audio_tx_conn_data_ind(struct rtp_conn *conn, const uint8_t *payload, uint32_t len);
+int llsk_audio_tx_conn_data_ind(struct rtp_conn *conn, uint8_t frame_nr, uint8_t fqc, uint8_t rfci,
+				const uint8_t *payload, uint32_t len);
 
 extern const struct value_string hnb_gtp_prim_type_names[];
 int llsk_rx_gtp(struct hnb *hnb, struct osmo_prim_hdr *oph);

@@ -186,12 +186,23 @@ enum hnb_audio_prim_type {
 };
 
 /* HNB_AUDIO_PRIM_CONN_ESTABLISH, UL */
+#define HNB_MAX_RFCIS 64
+#define HNB_MAX_SUBFLOWS 7
 struct hnb_audio_conn_establish_req_param {
 	uint32_t context_id;
 	uint16_t remote_rtp_port;
 	uint8_t spare1;
 	uint8_t remote_rtp_address_type;  /* enum u_addr_type */
 	union u_addr remote_rtp_addr;
+	/* IuUP related: */
+	uint8_t transparent; /* 1=transparent; 0=SMpSDU */
+	uint8_t data_pdu_type;
+	uint16_t supported_versions_mask; /* host byte order */
+	uint8_t num_rfci;
+	uint8_t num_subflows;
+	uint16_t subflow_sizes[HNB_MAX_RFCIS][HNB_MAX_SUBFLOWS];
+	uint8_t IPTIs_present; /* 1=present; 0=not present */
+	uint8_t IPTIs[HNB_MAX_RFCIS]; /* values range 0-15, 4 bits */
 } __attribute__ ((packed));
 
 /* HNB_AUDIO_PRIM_CONN_ESTABLISH, DL */
@@ -212,6 +223,10 @@ struct hnb_audio_conn_release_req_param {
 /* HNB_AUDIO_PRIM_CONN_DATA, UL */
 struct hnb_audio_conn_data_req_param {
 	uint32_t audio_conn_id;
+	uint8_t frame_nr;
+	uint8_t fqc;
+	uint8_t rfci;
+	uint8_t spare;
 	uint32_t data_len; /* RTP payload length in bytes */
 	uint8_t data[0]; /* RTP payload (aka IP packet) */
 } __attribute__ ((packed));
@@ -219,6 +234,10 @@ struct hnb_audio_conn_data_req_param {
 /* HNB_AUDIO_PRIM_CONN_DATA, DL */
 struct hnb_audio_conn_data_ind_param {
 	uint32_t audio_conn_id;
+	uint8_t frame_nr;
+	uint8_t fqc;
+	uint8_t rfci;
+	uint8_t spare;
 	uint32_t data_len; /* RTP payload length in bytes */
 	uint8_t data[0]; /* RTP payload (aka IP packet) */
 } __attribute__ ((packed));

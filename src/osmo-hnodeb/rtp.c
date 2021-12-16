@@ -22,20 +22,99 @@
 #include <errno.h>
 #include <sys/socket.h>
 
+#include <osmocom/gsm/prim.h>
+#include <osmocom/gsm/iuup.h>
 #include <osmocom/trau/osmo_ortp.h>
 
 #include <osmocom/hnodeb/rtp.h>
 #include <osmocom/hnodeb/hnodeb.h>
 
+#define HNB_IUUP_MSGB_SIZE 4096
+
+static struct osmo_iuup_rnl_prim *llsk_audio_ce_to_iuup_rnl_cfg(void *ctx, const struct hnb_audio_conn_establish_req_param *ce_req)
+{
+	struct osmo_iuup_rnl_prim *irp;
+	struct osmo_iuup_rnl_config *cfg;
+	unsigned int i;
+
+	irp = osmo_iuup_rnl_prim_alloc(ctx, OSMO_IUUP_RNL_CONFIG, PRIM_OP_REQUEST, HNB_IUUP_MSGB_SIZE);
+	cfg = &irp->u.config;
+	cfg->transparent = !!ce_req->transparent;
+	cfg->active = true;
+	cfg->data_pdu_type = ce_req->data_pdu_type;
+	cfg->supported_versions_mask = ce_req->supported_versions_mask;
+	cfg->num_rfci = ce_req->num_rfci;
+	cfg->num_subflows = ce_req->num_subflows;
+	OSMO_ASSERT(cfg->num_rfci <= ARRAY_SIZE(cfg->subflow_sizes));
+	OSMO_ASSERT(cfg->num_subflows <= ARRAY_SIZE(cfg->subflow_sizes[0]));
+	for (i = 0; i < cfg->num_rfci; i++)
+		memcpy(&cfg->subflow_sizes[i][0], &ce_req->subflow_sizes[i][0], cfg->num_subflows*sizeof(uint16_t));
+	cfg->IPTIs_present = ce_req->IPTIs_present;
+	if (cfg->IPTIs_present)
+		memcpy(cfg->IPTIs, ce_req->IPTIs, cfg->num_rfci);
+
+	cfg->t_init = (struct osmo_iuup_rnl_config_timer){ .t_ms = IUUP_TIMER_INIT_T_DEFAULT, .n_max = IUUP_TIMER_INIT_N_DEFAULT };
+	cfg->t_ta   = (struct osmo_iuup_rnl_config_timer){ .t_ms = IUUP_TIMER_TA_T_DEFAULT, .n_max = IUUP_TIMER_TA_N_DEFAULT };
+	cfg->t_rc   = (struct osmo_iuup_rnl_config_timer){ .t_ms = IUUP_TIMER_RC_T_DEFAULT, .n_max = IUUP_TIMER_RC_N_DEFAULT };
+
+	return irp;
+}
+
+static int _iuup_user_prim_cb(struct osmo_prim_hdr *oph, void *ctx)
+{
+	struct rtp_conn *conn = (struct rtp_conn *)ctx;
+	struct osmo_iuup_rnl_prim *irp = (struct osmo_iuup_rnl_prim *)oph;
+	struct msgb *msg = oph->msg;
+	int rc;
+
+	switch (OSMO_PRIM_HDR(&irp->oph)) {
+	case OSMO_PRIM(OSMO_IUUP_RNL_DATA, PRIM_OP_INDICATION):
+		rc = llsk_audio_tx_conn_data_ind(conn, irp->u.data.frame_nr, irp->u.data.fqc,
+						 irp->u.data.rfci, msgb_l3(msg), msgb_l3len(msg));
+		break;
+	default:
+		LOGUE(conn->ue, DRTP, LOGL_NOTICE, "Rx Unknown prim=%u op=%u from IuUP layer",
+		      irp->oph.primitive, irp->oph.operation);
+		rc = -1;
+	}
+
+	msgb_free(msg);
+	return rc;
+}
+
+static int _iuup_transport_prim_cb(struct osmo_prim_hdr *oph, void *ctx)
+{
+	struct rtp_conn *conn = (struct rtp_conn *)ctx;
+	struct msgb *msg = oph->msg;
+	int rc;
+
+	rc = osmo_rtp_send_frame_ext(conn->socket, msgb_l2(msg), msgb_l2len(msg),
+				     GSM_RTP_DURATION, false);
+	if (rc < 0) {
+		LOGUE(conn->ue, DLLSK, LOGL_ERROR,
+		      "Rx IuUP Transport UNITDATA.req: Failed sending RTP frame! id=%u data_len=%u\n",
+		      conn->id, msgb_l2len(msg));
+	}
+
+	msgb_free(msg);
+	return rc;
+}
+
 struct rtp_conn *rtp_conn_alloc(struct hnb_ue *ue)
 {
 	struct rtp_conn *conn;
+	char iuup_id[64];
 
 	conn = talloc_zero(ue, struct rtp_conn);
 	if (!conn)
 		return NULL;
 
 	conn->ue = ue;
+
+	snprintf(iuup_id, sizeof(iuup_id), "ue-%u", conn->ue->conn_id);
+	conn->iui = osmo_iuup_instance_alloc(conn, iuup_id);
+	osmo_iuup_instance_set_user_prim_cb(conn->iui, _iuup_user_prim_cb, conn);
+	osmo_iuup_instance_set_transport_prim_cb(conn->iui, _iuup_transport_prim_cb, conn);
 
 	llist_add(&conn->list, &ue->conn_cs.conn_list);
 
@@ -50,6 +129,10 @@ void rtp_conn_free(struct rtp_conn *conn)
 	if (conn->socket) {
 		osmo_rtp_socket_free(conn->socket);
 		conn->socket = NULL;
+	}
+	if (conn->iui) {
+		osmo_iuup_instance_free(conn->iui);
+		conn->iui = NULL;
 	}
 	llist_del(&conn->list);
 	talloc_free(conn);
@@ -158,13 +241,23 @@ static void rtp_rx_cb(struct osmo_rtp_socket *rs, const uint8_t *rtp_pl,
 	       uint32_t timestamp, bool marker)
 {
 	struct rtp_conn *conn = (struct rtp_conn *)rs->priv;
+	struct osmo_iuup_tnl_prim *itp;
+	int rc;
 
 	LOGUE(conn->ue, DRTP, LOGL_DEBUG, "Rx RTP seq=%u ts=%u M=%u pl=%p len=%u\n",
 	      seq_number, timestamp, marker, rtp_pl, rtp_pl_len);
-	llsk_audio_tx_conn_data_ind(conn, rtp_pl, rtp_pl_len);
+
+	itp = osmo_iuup_tnl_prim_alloc(conn, OSMO_IUUP_TNL_UNITDATA, PRIM_OP_INDICATION, HNB_IUUP_MSGB_SIZE);
+	itp->oph.msg->l2h = msgb_put(itp->oph.msg, rtp_pl_len);
+	memcpy(itp->oph.msg->l2h, rtp_pl, rtp_pl_len);
+	rc = osmo_iuup_tnl_prim_up(conn->iui, itp);
+	if (rc < 0)
+		LOGUE(conn->ue, DRTP, LOGL_NOTICE,
+		      "Failed passing rx rtp up to IuUP layer: %d\n", rc);
 }
 
-int rtp_conn_setup(struct rtp_conn *conn, const struct osmo_sockaddr *rem_addr)
+int rtp_conn_setup(struct rtp_conn *conn, const struct osmo_sockaddr *rem_addr,
+		   const struct hnb_audio_conn_establish_req_param *ce_req)
 {
 	int rc;
 	char cname[256+4];
@@ -173,6 +266,7 @@ int rtp_conn_setup(struct rtp_conn *conn, const struct osmo_sockaddr *rem_addr)
 	const char *local_wildcard_ipstr = "0.0.0.0";
 	char remote_ipstr[INET6_ADDRSTRLEN];
 	uint16_t remote_port;
+	struct osmo_iuup_rnl_prim *irp;
 	struct hnb_ue *ue = conn->ue;
 	struct hnb *hnb = ue->hnb;
 
@@ -231,9 +325,30 @@ int rtp_conn_setup(struct rtp_conn *conn, const struct osmo_sockaddr *rem_addr)
 		goto free_ret;
 	}
 
+	/* Now configure the IuUP layer: */
+	irp = llsk_audio_ce_to_iuup_rnl_cfg(conn, ce_req);
+	rc = osmo_iuup_rnl_prim_down(conn->iui, irp);
+	if (rc < 0) {
+		LOGUE(ue, DRTP, LOGL_ERROR, "Failed setting up IuUP layer: %d\n", rc);
+		goto free_ret;
+	}
+
 	return rc;
 free_ret:
 	osmo_rtp_socket_free(conn->socket);
 	conn->socket = NULL;
 	return rc;
+}
+
+int rtp_conn_tx_data(struct rtp_conn *conn, uint8_t frame_nr, uint8_t fqc, uint8_t rfci, const uint8_t *data, unsigned int data_len)
+{
+	struct osmo_iuup_rnl_prim *irp;
+
+	irp = osmo_iuup_rnl_prim_alloc(conn, OSMO_IUUP_RNL_DATA, PRIM_OP_REQUEST, HNB_IUUP_MSGB_SIZE);
+	irp->u.data.rfci = rfci;
+	irp->u.data.frame_nr = frame_nr;
+	irp->u.data.fqc = fqc;
+	irp->oph.msg->l3h = msgb_put(irp->oph.msg, data_len);
+	memcpy(irp->oph.msg->l3h, data, data_len);
+	return osmo_iuup_rnl_prim_down(conn->iui, irp);
 }

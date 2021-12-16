@@ -18,8 +18,11 @@
  */
 #pragma once
 
+#include <stdint.h>
+
 #include <osmocom/core/socket.h>
 #include <osmocom/core/linuxlist.h>
+#include <osmocom/hnodeb/hnb_prim.h>
 
 struct hnb;
 struct hnb_ue;
@@ -31,9 +34,11 @@ struct rtp_conn {
 	struct osmo_rtp_socket *socket;
 	struct osmo_sockaddr loc_addr;
 	struct osmo_sockaddr rem_addr;
+	struct osmo_iuup_instance *iui;
 };
 
 struct rtp_conn *rtp_conn_alloc(struct hnb_ue *ue);
 void rtp_conn_free(struct rtp_conn *conn);
 
-int rtp_conn_setup(struct rtp_conn *conn, const struct osmo_sockaddr *rem_addr);
+int rtp_conn_setup(struct rtp_conn *conn, const struct osmo_sockaddr *rem_addr, const struct hnb_audio_conn_establish_req_param *ce_req);
+int rtp_conn_tx_data(struct rtp_conn *conn, uint8_t frame_nr, uint8_t fqc, uint8_t rfci, const uint8_t *data, unsigned int data_len);

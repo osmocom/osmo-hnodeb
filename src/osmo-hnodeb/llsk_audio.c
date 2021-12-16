@@ -101,13 +101,16 @@ static struct hnb_audio_prim *hnb_audio_makeprim_conn_establish_cnf(uint32_t con
 }
 
 static struct hnb_audio_prim *hnb_audio_makeprim_conn_data_ind(uint32_t audio_conn_id,
-							const uint8_t *data,
-							uint32_t data_len)
+							       uint8_t frame_nr, uint8_t fqc, uint8_t rfci,
+							       const uint8_t *data, uint32_t data_len)
 {
 	struct hnb_audio_prim *audio_prim;
 
 	audio_prim = hnb_audio_prim_alloc(HNB_AUDIO_PRIM_CONN_DATA, PRIM_OP_INDICATION, data_len);
 	audio_prim->u.conn_data_ind.audio_conn_id = audio_conn_id;
+	audio_prim->u.conn_data_ind.frame_nr = frame_nr;
+	audio_prim->u.conn_data_ind.fqc = fqc;
+	audio_prim->u.conn_data_ind.rfci = rfci;
 	audio_prim->u.conn_data_ind.data_len = data_len;
 	if (data_len) {
 		msgb_put(audio_prim->hdr.msg, data_len);
@@ -117,13 +120,15 @@ static struct hnb_audio_prim *hnb_audio_makeprim_conn_data_ind(uint32_t audio_co
 	return audio_prim;
 }
 
-int llsk_audio_tx_conn_data_ind(struct rtp_conn *conn, const uint8_t *payload, uint32_t len)
+int llsk_audio_tx_conn_data_ind(struct rtp_conn *conn, uint8_t frame_nr, uint8_t fqc, uint8_t rfci,
+				const uint8_t *payload, uint32_t len)
 {
 	struct hnb_audio_prim *audio_prim;
 	int rc;
 
-	LOGUE(conn->ue, DLLSK, LOGL_INFO, "Tx AUDIO-CONN_DATA.ind\n");
-	audio_prim = hnb_audio_makeprim_conn_data_ind(conn->id, payload, len);
+	LOGUE(conn->ue, DLLSK, LOGL_DEBUG, "Tx AUDIO-CONN_DATA.ind conn_id=%u fn=%u fqc=%u rfci=%u data_len=%u\n",
+	      conn->id, frame_nr, fqc, rfci, len);
+	audio_prim = hnb_audio_makeprim_conn_data_ind(conn->id, frame_nr, fqc, rfci, payload, len);
 	if ((rc = osmo_prim_srv_send(conn->ue->hnb->llsk, audio_prim->hdr.msg)) < 0)
 		LOGUE(conn->ue, DLLSK, LOGL_ERROR, "Failed sending AUDIO-CONN_DATA.ind\n");
 	return rc;
@@ -186,7 +191,7 @@ static int llsk_rx_audio_conn_establish_req(struct hnb *hnb, struct hnb_audio_co
 
 	/* Create the socket: */
 	conn = rtp_conn_alloc(ue);
-	if ((rc = rtp_conn_setup(conn, &rem_osa)) < 0) {
+	if ((rc = rtp_conn_setup(conn, &rem_osa, ce_req)) < 0) {
 		LOGUE(ue, DLLSK, LOGL_ERROR, "Rx AUDIO-CONN_ESTABLISH.req: Failed to set up audio socket rem_addr=%s\n",
 		      rem_addrstr);
 		return _send_conn_establish_cnf_failed(hnb, ce_req->context_id, 4);
@@ -248,14 +253,8 @@ static int llsk_rx_audio_conn_data_req(struct hnb *hnb, struct hnb_audio_conn_da
 		return -EINVAL;
 	}
 
-	/* TODO: transmit data_req->data through RTP/Iu-UP socket */
-	rc = osmo_rtp_send_frame_ext(conn->socket, data_req->data,
-				     data_req->data_len, GSM_RTP_DURATION, false);
-	if (rc < 0) {
-		LOGUE(conn->ue, DLLSK, LOGL_ERROR,
-		      "Rx AUDIO-CONN_DATA.req: Failed sending RTP frame! id=%u data_len=%u\n",
-		      data_req->audio_conn_id, data_req->data_len);
-	}
+	/* Transmit data_req->data through RTP/Iu-UP socket */
+	rc = rtp_conn_tx_data(conn, data_req->frame_nr, data_req->fqc, data_req->rfci, data_req->data, data_req->data_len);
 	return rc;
 }
 
