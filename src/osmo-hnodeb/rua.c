@@ -140,6 +140,7 @@ static int hnb_rua_rx_initiating(struct hnb *hnb, RUA_InitiatingMessage_t *init)
 	case RUA_ProcedureCode_id_DirectTransfer:
 		LOGP(DRUA, LOGL_INFO, "RUA rx Initiating DirectTransfer\n");
 		hnb_rua_dt_handle(hnb, &init->value);
+		break;
 	default:
 		LOGP(DRUA, LOGL_INFO, "RUA rx unknown Initiating message\n");
 		break;
