@@ -152,7 +152,7 @@ static int llsk_rx_audio_conn_establish_req(struct hnb *hnb, struct hnb_audio_co
 	char rem_addrstr[INET6_ADDRSTRLEN+32];
 	struct osmo_sockaddr rem_osa = {0};
 	union u_addr loc_uaddr = {0};
-	uint16_t loc_port;
+	uint16_t loc_port = 0;
 	struct rtp_conn *conn = NULL;
 
 	rc = ll_addr2osa(ce_req->remote_rtp_address_type, &ce_req->remote_rtp_addr, ce_req->remote_rtp_port, &rem_osa);
