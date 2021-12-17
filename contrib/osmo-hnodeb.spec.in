@@ -36,6 +36,7 @@ BuildRequires:  pkgconfig(libcrypto) >= 0.9.5
 BuildRequires:  pkgconfig(libosmo-netif) >= 1.1.0
 BuildRequires:  pkgconfig(libosmo-sigtran) >= 1.5.0
 BuildRequires:  pkgconfig(libosmoabis) >= 1.2.0
+BuildRequires:  pkgconfig(libosmotrau) >= 1.2.0
 BuildRequires:  pkgconfig(libosmocore) >= 1.6.0
 BuildRequires:  pkgconfig(libosmoctrl) >= 1.6.0
 BuildRequires:  pkgconfig(libosmogb) >= 1.6.0
