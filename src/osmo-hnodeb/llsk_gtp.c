@@ -169,6 +169,9 @@ static int llsk_rx_gtp_conn_establish_req(struct hnb *hnb, struct hnb_gtp_conn_e
 
 	/* Create the socket: */
 	conn = gtp_conn_alloc(ue);
+	if (!conn)
+		return _send_conn_establish_cnf_failed(hnb, ce_req->context_id, 4);
+
 	if ((rc = gtp_conn_setup(conn, &rem_osa, ce_req->remote_tei)) < 0) {
 		LOGUE(ue, DLLSK, LOGL_ERROR, "Rx GTP-CONN_ESTABLISH.req: Failed to set up gtp socket rem_tei=%u rem_addr=%s\n",
 		     ce_req->remote_tei, rem_addrstr);
