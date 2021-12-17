@@ -79,12 +79,18 @@ static int hnb_gtp_cb_data_ind(struct pdp_t *lib, void *packet, unsigned int len
 	struct hnb *hnb;
 	int rc;
 
-	if (!conn || !conn->ue->conn_ps.active) {
-		LOGUE(conn->ue, DGTP, LOGL_NOTICE, "Tx GTP-CONN_DATA.ind data=%p len=%u but UE conn_ps is not active!\n",
-		      packet, len);
+	if (!conn) {
+		LOGP(DGTP, LOGL_NOTICE, "Tx GTP-CONN_DATA.ind data=%p len=%u with no conn!\n",
+		     packet, len);
 		return -EINVAL;
 	}
 	ue = conn->ue;
+
+	if (!ue->conn_ps.active) {
+		LOGUE(ue, DGTP, LOGL_NOTICE, "Tx GTP-CONN_DATA.ind data=%p len=%u but UE conn_ps is not active!\n",
+		      packet, len);
+		return -EINVAL;
+	}
 	hnb = ue->hnb;
 
 	LOGUE(ue, DGTP, LOGL_DEBUG, "Tx GTP-CONN_DATA.ind data=%p len=%u\n", packet, len);
