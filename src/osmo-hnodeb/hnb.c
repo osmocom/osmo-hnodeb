@@ -61,7 +61,9 @@ struct hnb *hnb_alloc(void *tall_ctx)
 	hnb->rtp.priority = -1;
 
 	hnb->gtp.cfg_local_addr = talloc_strdup(hnb, "0.0.0.0");
-	hnb->gtp.fd1u.fd = -1;
+	osmo_wqueue_init(&hnb->gtp.wq1u, 1024);
+	hnb->gtp.wq1u.bfd.data = hnb;
+	hnb->gtp.wq1u.bfd.fd = -1;
 
 	hnb->shutdown_fi = osmo_fsm_inst_alloc(&hnb_shutdown_fsm, hnb, hnb,
 					       LOGL_INFO, NULL);
@@ -90,10 +92,7 @@ void hnb_free(struct hnb *hnb)
 	osmo_prim_srv_link_free(hnb->llsk_link);
 	hnb->llsk_link = NULL;
 
-	if (hnb->gtp.gsn) {
-		gtp_free(hnb->gtp.gsn);
-		hnb->gtp.gsn = NULL;
-	}
+	hnb_gtp_unbind(hnb);
 
 	talloc_free(hnb);
 }

@@ -138,7 +138,7 @@ static int llsk_rx_gtp_conn_establish_req(struct hnb *hnb, struct hnb_gtp_conn_e
 	union u_addr loc_uaddr = {0};
 	struct gtp_conn *conn = NULL;
 
-	rc = ll_addr2osa(ce_req->remote_gtpu_address_type, &ce_req->remote_gtpu_addr, GTP1U_PORT, &rem_osa);
+	rc = ll_addr2osa(ce_req->remote_gtpu_address_type, &ce_req->remote_gtpu_addr, 2152, &rem_osa);
 	if (rc < 0) {
 		LOGP(DLLSK, LOGL_ERROR, "Rx GTP-CONN_ESTABLISH.req: ctx=%u with unexpected address type %u\n",
 		     ce_req->context_id, ce_req->remote_gtpu_address_type);

@@ -67,7 +67,6 @@ PKG_CHECK_MODULES(LIBOSMOSIGTRAN, libosmo-sigtran >= 1.5.0)
 PKG_CHECK_MODULES(LIBOSMORUA, libosmo-rua >= 0.8.0)
 PKG_CHECK_MODULES(LIBOSMORANAP, libosmo-ranap >= 0.8.0)
 PKG_CHECK_MODULES(LIBOSMOHNBAP, libosmo-hnbap >= 0.8.0)
-PKG_CHECK_MODULES(LIBGTP, libgtp >= 1.8.0)
 
 
 dnl checks for header files

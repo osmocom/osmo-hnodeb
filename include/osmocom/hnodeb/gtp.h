@@ -18,9 +18,6 @@
  */
 #pragma once
 
-#include <gtp.h>
-#include <pdp.h>
-
 #include <osmocom/core/socket.h>
 #include <osmocom/core/linuxlist.h>
 
@@ -38,11 +35,11 @@ struct gtp_conn {
 	struct osmo_sockaddr rem_addr;
 	uint32_t loc_tei;
 	uint32_t rem_tei;
-	struct pdp_t *pdp_lib;
+	uint16_t seq_nr;
 };
 
 struct gtp_conn *gtp_conn_alloc(struct hnb_ue *ue);
 void gtp_conn_free(struct gtp_conn *conn);
 
 int gtp_conn_setup(struct gtp_conn *conn, const struct osmo_sockaddr *rem_addr, uint32_t rem_tei);
-int gtp_conn_tx(struct gtp_conn *conn, void *gtpu_payload, unsigned gtpu_payload_len);
+int gtp_conn_tx(struct gtp_conn *conn, const uint8_t *gtpu_payload, unsigned gtpu_payload_len);

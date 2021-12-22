@@ -107,8 +107,7 @@ struct hnb {
 	struct gtp {
 		char *cfg_local_addr;
 		struct osmo_sockaddr local_addr;
-		struct gsn_t *gsn;
-		struct osmo_fd fd1u;
+		struct osmo_wqueue wq1u;
 	} gtp;
 
 	uint16_t rnc_id;
