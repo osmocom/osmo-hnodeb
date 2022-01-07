@@ -246,7 +246,7 @@ static int hnb_gtp_wq_read_cb(struct osmo_fd *fd)
 
 	if (hdr->s || hdr->pn || hdr->e)
 		opt_hdr_len = 4;
-	if (hdr->pn)
+	else
 		opt_hdr_len = 0;
 
 	if (msgb_length(msg) < sizeof(*hdr) + opt_hdr_len) {
