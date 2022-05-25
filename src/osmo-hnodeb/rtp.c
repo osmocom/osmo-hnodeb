@@ -45,13 +45,17 @@ static struct osmo_iuup_rnl_prim *llsk_audio_ce_to_iuup_rnl_cfg(void *ctx, const
 	cfg->supported_versions_mask = ce_req->supported_versions_mask;
 	cfg->num_rfci = ce_req->num_rfci;
 	cfg->num_subflows = ce_req->num_subflows;
-	OSMO_ASSERT(cfg->num_rfci <= ARRAY_SIZE(cfg->subflow_sizes));
-	OSMO_ASSERT(cfg->num_subflows <= ARRAY_SIZE(cfg->subflow_sizes[0]));
-	for (i = 0; i < cfg->num_rfci; i++)
-		memcpy(&cfg->subflow_sizes[i][0], &ce_req->subflow_sizes[i][0], cfg->num_subflows*sizeof(uint16_t));
 	cfg->IPTIs_present = ce_req->IPTIs_present;
-	if (cfg->IPTIs_present)
-		memcpy(cfg->IPTIs, ce_req->IPTIs, cfg->num_rfci);
+	OSMO_ASSERT(cfg->num_rfci <= ARRAY_SIZE(cfg->rfci));
+	OSMO_ASSERT(cfg->num_subflows <= ARRAY_SIZE(cfg->rfci[0].subflow_sizes));
+	for (i = 0; i < cfg->num_rfci; i++) {
+		cfg->rfci[i].used = true;
+		cfg->rfci[i].id = i; /* Assume RFC ID from position, llsk_audio doesn't provide info */
+		if (cfg->IPTIs_present)
+			cfg->rfci[i].IPTI = ce_req->IPTIs[i];
+		if (cfg->num_subflows > 0)
+			memcpy(&cfg->rfci[i].subflow_sizes[0], &ce_req->subflow_sizes[i][0], cfg->num_subflows*sizeof(uint16_t));
+	}
 
 	cfg->t_init = (struct osmo_iuup_rnl_config_timer){ .t_ms = IUUP_TIMER_INIT_T_DEFAULT, .n_max = IUUP_TIMER_INIT_N_DEFAULT };
 	cfg->t_ta   = (struct osmo_iuup_rnl_config_timer){ .t_ms = IUUP_TIMER_TA_T_DEFAULT, .n_max = IUUP_TIMER_TA_N_DEFAULT };
