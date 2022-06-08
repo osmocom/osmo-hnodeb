@@ -146,6 +146,33 @@ static int llsk_rx_sapi_version_cb(struct osmo_prim_srv *prim_srv, uint32_t sapi
 	struct hnb *hnb = (struct hnb *)osmo_prim_srv_get_priv(prim_srv);
 	if (sapi > sizeof(hnb->llsk.valid_sapi_mask)*8 - 1)
 		return -1;
+
+	switch (sapi) {
+	case HNB_PRIM_SAPI_IUH:
+		if (rem_version < LLSK_SAPI_IUH_VERSION_MIN)
+			return -1;
+		if (rem_version > LLSK_SAPI_IUH_VERSION_MAX)
+			return LLSK_SAPI_IUH_VERSION_MAX;
+		hnb->llsk.sapi_version_iuh = rem_version;
+		break;
+	case HNB_PRIM_SAPI_GTP:
+		if (rem_version < LLSK_SAPI_GTP_VERSION_MIN)
+			return -1;
+		if (rem_version > LLSK_SAPI_GTP_VERSION_MAX)
+			return LLSK_SAPI_GTP_VERSION_MAX;
+		hnb->llsk.sapi_version_gtp = rem_version;
+		break;
+	case HNB_PRIM_SAPI_AUDIO:
+		if (rem_version < LLSK_SAPI_AUDIO_VERSION_MIN)
+			return -1;
+		if (rem_version > LLSK_SAPI_AUDIO_VERSION_MAX)
+			return LLSK_SAPI_AUDIO_VERSION_MAX;
+		hnb->llsk.sapi_version_audio = rem_version;
+		break;
+	default:
+		return -1;
+	}
+
 	hnb->llsk.valid_sapi_mask |= (1 << sapi);
 
 	/* Defer CONFIGURE.req after we have confirmed the versions */

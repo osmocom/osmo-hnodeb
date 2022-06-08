@@ -37,8 +37,8 @@ int ll_addr_type2af(enum u_addr_type t);
 int ll_addr2osa(enum u_addr_type t, const union u_addr *uaddr, uint16_t port, struct osmo_sockaddr *osa);
 enum u_addr_type osa2_ll_addr(const struct osmo_sockaddr *osa, union u_addr *uaddr, uint16_t *port);
 
-
-
+#define LLSK_SAPI_IUH_VERSION_MIN 0
+#define LLSK_SAPI_IUH_VERSION_MAX 0
 extern const struct value_string hnb_iuh_prim_type_names[];
 int llsk_rx_iuh(struct hnb *hnb, struct osmo_prim_hdr *oph);
 int llsk_iuh_tx_configure_ind(struct hnb *hnb);
@@ -50,12 +50,15 @@ struct hnb_iuh_prim *hnb_iuh_makeprim_conn_data_ind(uint32_t context_id,
 						    uint32_t data_len);
 struct hnb_iuh_prim *hnb_iuh_makeprim_unitdata_ind(const uint8_t *data, uint32_t data_len);
 
-
+#define LLSK_SAPI_AUDIO_VERSION_MIN 0
+#define LLSK_SAPI_AUDIO_VERSION_MAX 0
 extern const struct value_string hnb_audio_prim_type_names[];
 int llsk_rx_audio(struct hnb *hnb, struct osmo_prim_hdr *oph);
 int llsk_audio_tx_conn_data_ind(struct rtp_conn *conn, uint8_t frame_nr, uint8_t fqc, uint8_t rfci,
 				const uint8_t *payload, uint32_t len);
 
+#define LLSK_SAPI_GTP_VERSION_MIN 0
+#define LLSK_SAPI_GTP_VERSION_MAX 0
 extern const struct value_string hnb_gtp_prim_type_names[];
 int llsk_rx_gtp(struct hnb *hnb, struct osmo_prim_hdr *oph);
 struct hnb_gtp_prim *hnb_gtp_makeprim_conn_data_ind(uint32_t gtp_conn_id, const uint8_t *data, uint32_t data_len);

@@ -92,6 +92,9 @@ struct hnb {
 		struct osmo_prim_srv_link *link;
 		struct osmo_prim_srv *srv;
 		uint8_t valid_sapi_mask;
+		uint16_t sapi_version_iuh;
+		uint16_t sapi_version_gtp;
+		uint16_t sapi_version_audio;
 		struct osmo_timer_list defer_configure_ind_timer;
 	} llsk;
 
