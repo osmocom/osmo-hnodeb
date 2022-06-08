@@ -189,7 +189,7 @@ static int hnb_gtp_rx_gtp(struct hnb *hnb, struct msgb *msg, const struct osmo_s
 
 	LOGUE(ue, DGTP, LOGL_DEBUG, "Tx GTP-CONN_DATA.ind len=%u\n", msgb_l3len(msg));
 	gtp_prim = hnb_gtp_makeprim_conn_data_ind(conn->id, msgb_l3(msg), msgb_l3len(msg));
-	if ((rc = osmo_prim_srv_send(hnb->llsk, gtp_prim->hdr.msg)) < 0) {
+	if ((rc = osmo_prim_srv_send(hnb->llsk.srv, gtp_prim->hdr.msg)) < 0) {
 		LOGUE(ue, DGTP, LOGL_ERROR, "Failed Tx GTP-CONN_DATA.ind len=%u\n",
 		      msgb_l3len(msg));
 	}

@@ -275,7 +275,7 @@ int main(int argc, char **argv)
 	}
 
 	/* Start listening on lower layer unix domain socket: */
-	rc = osmo_prim_srv_link_open(g_hnb->llsk_link);
+	rc = osmo_prim_srv_link_open(g_hnb->llsk.link);
 	if (rc < 0) {
 		perror("Error opening lower layer socket");
 		exit(1);

@@ -86,13 +86,13 @@ static int llsk_opened_cb(struct osmo_prim_srv *srv)
 {
 	struct hnb *hnb = (struct hnb *)osmo_prim_srv_get_priv(srv);
 
-	if (hnb->llsk) {
+	if (hnb->llsk.srv) {
 		LOGP(DLLSK, LOGL_ERROR, "New connection opened while one is already active, dropping it\n");
 		osmo_prim_srv_close(srv);
 		return 0;
 	}
 	LOGP(DLLSK, LOGL_NOTICE, "LLSK conn is UP\n");
-	hnb->llsk = srv;
+	hnb->llsk.srv = srv;
 	return 0;
 }
 
@@ -100,37 +100,37 @@ static int llsk_closed_cb(struct osmo_prim_srv *srv)
 {
 	struct hnb *hnb = (struct hnb *)osmo_prim_srv_get_priv(srv);
 
-	if (!hnb->llsk) {
+	if (!hnb->llsk.srv) {
 		LOGP(DLLSK, LOGL_ERROR, "closed_cb received but we have no active llsk conn!\n");
 		return 0;
 	}
 	/* If a later conn different than active one is dropped (because we closed it): */
-	if (hnb->llsk != srv)
+	if (hnb->llsk.srv != srv)
 		return 0;
 	LOGP(DLLSK, LOGL_NOTICE, "LLSK conn is DOWN\n");
 
-	hnb->llsk = NULL;
-	hnb->llsk_valid_sapi_mask = 0x0;
-	osmo_timer_del(&hnb->llsk_defer_configure_ind_timer);
+	hnb->llsk.srv = NULL;
+	hnb->llsk.valid_sapi_mask = 0x0;
+	osmo_timer_del(&hnb->llsk.defer_configure_ind_timer);
 	hnb_shutdown(hnb, "LLSK conn dropped", false);
 	return 0;
 }
 
 bool hnb_llsk_connected(const struct hnb *hnb)
 {
-	return !!hnb->llsk;
+	return !!hnb->llsk.srv;
 }
 
 bool hnb_llsk_can_be_configured(struct hnb *hnb)
 {
 	if (!hnb->registered)
 		return false;
-	if (!hnb->llsk)
+	if (!hnb->llsk.srv)
 		return false;
 
-	if (hnb->llsk_valid_sapi_mask & (1 << HNB_PRIM_SAPI_IUH) &&
-	    hnb->llsk_valid_sapi_mask & (1 << HNB_PRIM_SAPI_AUDIO) &&
-	    hnb->llsk_valid_sapi_mask & (1 << HNB_PRIM_SAPI_GTP))
+	if (hnb->llsk.valid_sapi_mask & (1 << HNB_PRIM_SAPI_IUH) &&
+	    hnb->llsk.valid_sapi_mask & (1 << HNB_PRIM_SAPI_AUDIO) &&
+	    hnb->llsk.valid_sapi_mask & (1 << HNB_PRIM_SAPI_GTP))
 		return true;
 	return false;
 }
@@ -144,13 +144,13 @@ static void llsk_defer_configure_ind_timer_cb(void *data)
 static int llsk_rx_sapi_version_cb(struct osmo_prim_srv *prim_srv, uint32_t sapi, uint16_t rem_version)
 {
 	struct hnb *hnb = (struct hnb *)osmo_prim_srv_get_priv(prim_srv);
-	if (sapi > sizeof(hnb->llsk_valid_sapi_mask)*8 - 1)
+	if (sapi > sizeof(hnb->llsk.valid_sapi_mask)*8 - 1)
 		return -1;
-	hnb->llsk_valid_sapi_mask |= (1 << sapi);
+	hnb->llsk.valid_sapi_mask |= (1 << sapi);
 
 	/* Defer CONFIGURE.req after we have confirmed the versions */
 	if (hnb_llsk_can_be_configured(hnb))
-		osmo_timer_schedule(&hnb->llsk_defer_configure_ind_timer, 0, 0);
+		osmo_timer_schedule(&hnb->llsk.defer_configure_ind_timer, 0, 0);
 
 	return rem_version;
 }
@@ -177,14 +177,14 @@ static int llsk_rx_cb(struct osmo_prim_srv *srv, struct osmo_prim_hdr *oph)
 
 int hnb_llsk_alloc(struct hnb *hnb)
 {
-	hnb->llsk_link = osmo_prim_srv_link_alloc(hnb);
-	osmo_prim_srv_link_set_priv(hnb->llsk_link, hnb);
-	osmo_prim_srv_link_set_log_category(hnb->llsk_link, DLLSK);
-	osmo_prim_srv_link_set_addr(hnb->llsk_link, HNB_PRIM_UD_SOCK_DEFAULT);
-	osmo_prim_srv_link_set_opened_conn_cb(hnb->llsk_link, llsk_opened_cb);
-	osmo_prim_srv_link_set_closed_conn_cb(hnb->llsk_link, llsk_closed_cb);
-	osmo_prim_srv_link_set_rx_sapi_version_cb(hnb->llsk_link, llsk_rx_sapi_version_cb);
-	osmo_prim_srv_link_set_rx_cb(hnb->llsk_link, llsk_rx_cb);
-	osmo_timer_setup(&hnb->llsk_defer_configure_ind_timer, llsk_defer_configure_ind_timer_cb, hnb);
+	hnb->llsk.link = osmo_prim_srv_link_alloc(hnb);
+	osmo_prim_srv_link_set_priv(hnb->llsk.link, hnb);
+	osmo_prim_srv_link_set_log_category(hnb->llsk.link, DLLSK);
+	osmo_prim_srv_link_set_addr(hnb->llsk.link, HNB_PRIM_UD_SOCK_DEFAULT);
+	osmo_prim_srv_link_set_opened_conn_cb(hnb->llsk.link, llsk_opened_cb);
+	osmo_prim_srv_link_set_closed_conn_cb(hnb->llsk.link, llsk_closed_cb);
+	osmo_prim_srv_link_set_rx_sapi_version_cb(hnb->llsk.link, llsk_rx_sapi_version_cb);
+	osmo_prim_srv_link_set_rx_cb(hnb->llsk.link, llsk_rx_cb);
+	osmo_timer_setup(&hnb->llsk.defer_configure_ind_timer, llsk_defer_configure_ind_timer_cb, hnb);
 	return 0;
 }

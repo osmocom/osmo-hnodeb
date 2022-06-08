@@ -120,7 +120,7 @@ static int _send_conn_establish_cnf_failed(struct hnb *hnb, uint32_t context_id,
 	LOGP(DLLSK, LOGL_ERROR, "Tx GTP-CONN_ESTABLISH.cnf: ctx=%u error_code=%u\n",
 	     context_id, error_code);
 	gtp_prim = hnb_gtp_makeprim_conn_establish_cnf(context_id, 0, error_code, 0, HNB_PRIM_ADDR_TYPE_UNSPEC, NULL);
-	if ((rc = osmo_prim_srv_send(hnb->llsk, gtp_prim->hdr.msg)) < 0) {
+	if ((rc = osmo_prim_srv_send(hnb->llsk.srv, gtp_prim->hdr.msg)) < 0) {
 		LOGP(DLLSK, LOGL_ERROR, "Failed sending GTP-CONN_ESTABLISH.cnf context_id=%u error_code=%u\n",
 		     context_id, error_code);
 	}
@@ -191,7 +191,7 @@ static int llsk_rx_gtp_conn_establish_req(struct hnb *hnb, struct hnb_gtp_conn_e
 	     rem_addrstr, ce_req->remote_tei, osmo_sockaddr_to_str(&conn->loc_addr), conn->loc_tei);
 	gtp_prim = hnb_gtp_makeprim_conn_establish_cnf(ce_req->context_id, conn->id, 0, conn->loc_tei,
 						       ce_req->remote_gtpu_address_type, &loc_uaddr);
-	if ((rc = osmo_prim_srv_send(hnb->llsk, gtp_prim->hdr.msg)) < 0) {
+	if ((rc = osmo_prim_srv_send(hnb->llsk.srv, gtp_prim->hdr.msg)) < 0) {
 		LOGUE(ue, DLLSK, LOGL_ERROR, "Failed sending GTP-CONN_ESTABLISH.cnf error_code=0\n");
 		goto release_sock;
 	}

@@ -279,7 +279,7 @@ DEFUN(cfg_hnodeb_llsk_path, cfg_hnodeb_llsk_path_cmd,
       "Configure the Lower Layer Unix Domain Socket path\n"
       "UNIX socket path\n")
 {
-	osmo_prim_srv_link_set_addr(g_hnb->llsk_link, argv[0]);
+	osmo_prim_srv_link_set_addr(g_hnb->llsk.link, argv[0]);
 
 	/* FIXME: re-open the interface? */
 	return CMD_SUCCESS;
@@ -332,7 +332,7 @@ static int config_write_hnodeb(struct vty *vty)
 	vty_out(vty, "  remote-ip %s%s", g_hnb->iuh.remote_addr, VTY_NEWLINE);
 	vty_out(vty, "  remote-port %u%s", g_hnb->iuh.remote_port, VTY_NEWLINE);
 	vty_out(vty, " ll-socket%s", VTY_NEWLINE);
-	vty_out(vty, "  path %s%s", osmo_prim_srv_link_get_addr(g_hnb->llsk_link), VTY_NEWLINE);
+	vty_out(vty, "  path %s%s", osmo_prim_srv_link_get_addr(g_hnb->llsk.link), VTY_NEWLINE);
 	vty_out(vty, " gtp%s", VTY_NEWLINE);
 	vty_out(vty, "  local-ip %s%s", g_hnb->gtp.cfg_local_addr, VTY_NEWLINE);
 	return CMD_SUCCESS;

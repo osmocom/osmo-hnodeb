@@ -88,10 +88,12 @@ struct hnb {
 	} iuh;
 
 	/* Lower Layer UD socket */
-	struct osmo_prim_srv_link *llsk_link;
-	struct osmo_prim_srv *llsk;
-	uint8_t llsk_valid_sapi_mask;
-	struct osmo_timer_list llsk_defer_configure_ind_timer;
+	struct {
+		struct osmo_prim_srv_link *link;
+		struct osmo_prim_srv *srv;
+		uint8_t valid_sapi_mask;
+		struct osmo_timer_list defer_configure_ind_timer;
+	} llsk;
 
 	struct {
 		unsigned int jitter_buf_ms;

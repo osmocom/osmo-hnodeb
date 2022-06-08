@@ -117,7 +117,7 @@ int llsk_iuh_tx_configure_ind(struct hnb *hnb)
 	iuh_prim = hnb_iuh_makeprim_configure_ind(hnb->plmn.mcc, hnb->plmn.mnc,
 						  hnb->cell_identity, hnb->lac,
 						  hnb->rac, hnb->sac, hnb->rnc_id);
-	if ((rc = osmo_prim_srv_send(hnb->llsk, iuh_prim->hdr.msg)) < 0)
+	if ((rc = osmo_prim_srv_send(hnb->llsk.srv, iuh_prim->hdr.msg)) < 0)
 		LOGP(DLLSK, LOGL_ERROR, "Failed sending IUH-CONFIGURE.ind\n");
 	return rc;
 }

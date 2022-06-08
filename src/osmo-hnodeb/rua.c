@@ -77,7 +77,7 @@ static void hnb_rua_dt_handle(struct hnb *hnb, ANY_t *in)
 		LOGP(DLLSK, LOGL_INFO, "Tx IUH-CONN_ESTABLISH.cnf context_id=%u is_ps=%u\n",
 		     context_id, is_ps);
 		iuh_prim = hnb_iuh_makeprim_conn_establish_cnf(context_id, is_ps, 0);
-		if ((rc = osmo_prim_srv_send(hnb->llsk, iuh_prim->hdr.msg)) < 0) {
+		if ((rc = osmo_prim_srv_send(hnb->llsk.srv, iuh_prim->hdr.msg)) < 0) {
 			LOGP(DRUA, LOGL_ERROR, "Failed sending IUH-CONN_ESTABLISH.cnf context_id=%u is_ps=%u\n",
 			     context_id, is_ps);
 			goto free_ret;
@@ -87,7 +87,7 @@ static void hnb_rua_dt_handle(struct hnb *hnb, ANY_t *in)
 	LOGP(DLLSK, LOGL_DEBUG, "Tx IUH-CONN_DATA.ind context_id=%u is_ps=%u ranap_len=%zu\n",
 	     context_id, is_ps, ranap_buf_len);
 	iuh_prim = hnb_iuh_makeprim_conn_data_ind(context_id, is_ps, ranap_buf, ranap_buf_len);
-	if ((rc = osmo_prim_srv_send(hnb->llsk, iuh_prim->hdr.msg)) < 0) {
+	if ((rc = osmo_prim_srv_send(hnb->llsk.srv, iuh_prim->hdr.msg)) < 0) {
 		LOGP(DRUA, LOGL_ERROR, "Failed sending IUH-CONN_DATA.ind context_id=%u is_ps=%u ranap_len=%zu\n",
 		     context_id, is_ps, ranap_buf_len);
 		goto free_ret;
@@ -118,7 +118,7 @@ static void hnb_rua_cl_handle(struct hnb *hnb, ANY_t *in)
 
 	LOGP(DLLSK, LOGL_DEBUG, "Tx IUH-UNITDATA.ind ranap_len=%zu\n", ranap_buf_len);
 	iuh_prim = hnb_iuh_makeprim_unitdata_ind(ranap_buf, ranap_buf_len);
-	if ((rc = osmo_prim_srv_send(hnb->llsk, iuh_prim->hdr.msg)) < 0) {
+	if ((rc = osmo_prim_srv_send(hnb->llsk.srv, iuh_prim->hdr.msg)) < 0) {
 		LOGP(DRUA, LOGL_ERROR, "Failed sending IUH-CONN_DATA.ind ranap_len=%zu\n",
 		     ranap_buf_len);
 		goto free_ret;
