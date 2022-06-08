@@ -68,6 +68,24 @@ const struct value_string hnb_audio_prim_type_names[] = {
 	{ 0, NULL }
 };
 
+int llsk_audio_sapi_version_confirmed(uint16_t sapi_version)
+{
+	/* Update primitive size expectancies based on SAPI version: */
+	switch (sapi_version) {
+	case 0:
+		llsk_audio_prim_size_tbl[PRIM_OP_REQUEST][HNB_AUDIO_PRIM_CONN_ESTABLISH] =
+			sizeof(struct hnb_audio_conn_establish_req_param_v0);
+		break;
+	case 1:
+		llsk_audio_prim_size_tbl[PRIM_OP_REQUEST][HNB_AUDIO_PRIM_CONN_ESTABLISH] =
+			sizeof(struct hnb_audio_conn_establish_req_param_v1);
+		break;
+	default:
+		return -1;
+	}
+	return 0;
+}
+
 static struct hnb_audio_prim *hnb_audio_prim_alloc(enum hnb_audio_prim_type ptype, enum osmo_prim_operation op, size_t extra_len)
 {
 	struct osmo_prim_hdr *oph;
@@ -159,34 +177,35 @@ static int llsk_rx_audio_conn_establish_req(struct hnb *hnb, struct hnb_audio_co
 	union u_addr loc_uaddr = {0};
 	uint16_t loc_port = 0;
 	struct rtp_conn *conn = NULL;
+	struct hnb_audio_conn_establish_req_param_v0 *v0 = &ce_req->v0;
 
-	rc = ll_addr2osa(ce_req->remote_rtp_address_type, &ce_req->remote_rtp_addr, ce_req->remote_rtp_port, &rem_osa);
+	rc = ll_addr2osa(v0->remote_rtp_address_type, &v0->remote_rtp_addr, v0->remote_rtp_port, &rem_osa);
 	if (rc < 0) {
 		LOGP(DLLSK, LOGL_ERROR, "Rx AUDIO-CONN_ESTABLISH.req: ctx=%u with unexpected address type %u\n",
-		     ce_req->context_id, ce_req->remote_rtp_address_type);
-		return _send_conn_establish_cnf_failed(hnb, ce_req->context_id, 1);
+		     v0->context_id, v0->remote_rtp_address_type);
+		return _send_conn_establish_cnf_failed(hnb, v0->context_id, 1);
 	}
 	osmo_sockaddr_to_str_buf(rem_addrstr, sizeof(rem_addrstr), &rem_osa);
 
 	LOGP(DLLSK, LOGL_INFO, "Rx AUDIO-CONN_ESTABLISH.req ctx=%u rem_addr=%s\n",
-	     ce_req->context_id, rem_addrstr);
+	     v0->context_id, rem_addrstr);
 
-	if ((af = ll_addr_type2af(ce_req->remote_rtp_address_type)) < 0) {
+	if ((af = ll_addr_type2af(v0->remote_rtp_address_type)) < 0) {
 		LOGP(DLLSK, LOGL_ERROR, "Rx AUDIO-CONN_ESTABLISH.req: ctx=%u with unexpected address type %u\n",
-		     ce_req->context_id, ce_req->remote_rtp_address_type);
-		return _send_conn_establish_cnf_failed(hnb, ce_req->context_id, 1);
+		     v0->context_id, v0->remote_rtp_address_type);
+		return _send_conn_establish_cnf_failed(hnb, v0->context_id, 1);
 	}
 
-	ue = hnb_find_ue_by_id(hnb, ce_req->context_id);
+	ue = hnb_find_ue_by_id(hnb, v0->context_id);
 	if (!ue) {
 		LOGP(DLLSK, LOGL_ERROR, "Rx AUDIO-CONN_ESTABLISH.req: UE not found! ctx=%u rem_addr=%s\n",
-		     ce_req->context_id, rem_addrstr);
-		return _send_conn_establish_cnf_failed(hnb, ce_req->context_id, 2);
+		     v0->context_id, rem_addrstr);
+		return _send_conn_establish_cnf_failed(hnb, v0->context_id, 2);
 	}
 	if (!ue->conn_cs.active) {
 		LOGUE(ue, DLLSK, LOGL_ERROR, "Rx AUDIO-CONN_ESTABLISH.req: CS chan not active! rem_addr=%s\n",
 		      rem_addrstr);
-		return _send_conn_establish_cnf_failed(hnb, ce_req->context_id, 3);
+		return _send_conn_establish_cnf_failed(hnb, v0->context_id, 3);
 	}
 
 	/* Create the socket: */
@@ -194,22 +213,22 @@ static int llsk_rx_audio_conn_establish_req(struct hnb *hnb, struct hnb_audio_co
 	if ((rc = rtp_conn_setup(conn, &rem_osa, ce_req)) < 0) {
 		LOGUE(ue, DLLSK, LOGL_ERROR, "Rx AUDIO-CONN_ESTABLISH.req: Failed to set up audio socket rem_addr=%s\n",
 		      rem_addrstr);
-		return _send_conn_establish_cnf_failed(hnb, ce_req->context_id, 4);
+		return _send_conn_establish_cnf_failed(hnb, v0->context_id, 4);
 	}
 
 	/* Convert resulting local address back to LLSK format: */
-	if (osa2_ll_addr(&conn->loc_addr, &loc_uaddr,  &loc_port) != ce_req->remote_rtp_address_type) {
+	if (osa2_ll_addr(&conn->loc_addr, &loc_uaddr,  &loc_port) != v0->remote_rtp_address_type) {
 		LOGUE(ue, DLLSK, LOGL_ERROR, "Rx AUDIO-CONN_ESTABLISH.req: Failed to provide proper local address rem_addr=%s\n",
 		      rem_addrstr);
-		rc = _send_conn_establish_cnf_failed(hnb, ce_req->context_id, 4);
+		rc = _send_conn_establish_cnf_failed(hnb, v0->context_id, 4);
 		goto release_sock;
 	}
 
 	/* Submit successful confirmation */
 	LOGUE(ue, DLLSK, LOGL_INFO, "Tx AUDIO-CONN_ESTABLISH.cnf: error_code=0 rem_addr=%s loc_addr=%s\n",
 	      rem_addrstr, osmo_sockaddr_to_str(&conn->loc_addr));
-	audio_prim = hnb_audio_makeprim_conn_establish_cnf(ce_req->context_id, conn->id, 0, loc_port,
-							   ce_req->remote_rtp_address_type, &loc_uaddr);
+	audio_prim = hnb_audio_makeprim_conn_establish_cnf(v0->context_id, conn->id, 0, loc_port,
+							   v0->remote_rtp_address_type, &loc_uaddr);
 	if ((rc = osmo_prim_srv_send(hnb->llsk.srv, audio_prim->hdr.msg)) < 0) {
 		LOGUE(ue, DLLSK, LOGL_ERROR, "Failed sending AUDIO-CONN_ESTABLISH.cnf error_code=0\n");
 		goto release_sock;

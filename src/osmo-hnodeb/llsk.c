@@ -167,6 +167,8 @@ static int llsk_rx_sapi_version_cb(struct osmo_prim_srv *prim_srv, uint32_t sapi
 			return -1;
 		if (rem_version > LLSK_SAPI_AUDIO_VERSION_MAX)
 			return LLSK_SAPI_AUDIO_VERSION_MAX;
+		if (llsk_audio_sapi_version_confirmed(hnb->llsk.sapi_version_audio) < 0)
+			return -1;
 		hnb->llsk.sapi_version_audio = rem_version;
 		break;
 	default:

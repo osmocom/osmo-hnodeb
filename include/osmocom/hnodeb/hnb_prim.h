@@ -188,7 +188,7 @@ enum hnb_audio_prim_type {
 /* HNB_AUDIO_PRIM_CONN_ESTABLISH, UL */
 #define HNB_MAX_RFCIS 64
 #define HNB_MAX_SUBFLOWS 7
-struct hnb_audio_conn_establish_req_param {
+struct hnb_audio_conn_establish_req_param_v0 {
 	uint32_t context_id;
 	uint16_t remote_rtp_port;
 	uint8_t spare1;
@@ -203,6 +203,16 @@ struct hnb_audio_conn_establish_req_param {
 	uint16_t subflow_sizes[HNB_MAX_RFCIS][HNB_MAX_SUBFLOWS];
 	uint8_t IPTIs_present; /* 1=present; 0=not present */
 	uint8_t IPTIs[HNB_MAX_RFCIS]; /* values range 0-15, 4 bits */
+} __attribute__ ((packed));
+struct hnb_audio_conn_establish_req_param_v1 {
+	struct hnb_audio_conn_establish_req_param_v0 v0;
+	uint8_t rfci[HNB_MAX_RFCIS]; /* values range 6 bits */
+} __attribute__ ((packed));
+struct hnb_audio_conn_establish_req_param {
+	union {
+		struct hnb_audio_conn_establish_req_param_v0 v0;
+		struct hnb_audio_conn_establish_req_param_v1 v1;
+	} __attribute__ ((packed));
 } __attribute__ ((packed));
 
 /* HNB_AUDIO_PRIM_CONN_ESTABLISH, DL */

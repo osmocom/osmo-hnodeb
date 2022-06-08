@@ -31,30 +31,33 @@
 
 #define HNB_IUUP_MSGB_SIZE 4096
 
-static struct osmo_iuup_rnl_prim *llsk_audio_ce_to_iuup_rnl_cfg(void *ctx, const struct hnb_audio_conn_establish_req_param *ce_req)
+static struct osmo_iuup_rnl_prim *llsk_audio_ce_to_iuup_rnl_cfg(struct rtp_conn *conn, const struct hnb_audio_conn_establish_req_param *ce_req)
 {
 	struct osmo_iuup_rnl_prim *irp;
 	struct osmo_iuup_rnl_config *cfg;
 	unsigned int i;
+	const struct hnb_audio_conn_establish_req_param_v0 *v0 = &ce_req->v0;
+	const struct hnb *hnb = conn->ue->hnb;
 
-	irp = osmo_iuup_rnl_prim_alloc(ctx, OSMO_IUUP_RNL_CONFIG, PRIM_OP_REQUEST, HNB_IUUP_MSGB_SIZE);
+	irp = osmo_iuup_rnl_prim_alloc(conn, OSMO_IUUP_RNL_CONFIG, PRIM_OP_REQUEST, HNB_IUUP_MSGB_SIZE);
 	cfg = &irp->u.config;
-	cfg->transparent = !!ce_req->transparent;
+	cfg->transparent = !!v0->transparent;
 	cfg->active = true;
-	cfg->data_pdu_type = ce_req->data_pdu_type;
-	cfg->supported_versions_mask = ce_req->supported_versions_mask;
-	cfg->num_rfci = ce_req->num_rfci;
-	cfg->num_subflows = ce_req->num_subflows;
-	cfg->IPTIs_present = ce_req->IPTIs_present;
+	cfg->data_pdu_type = v0->data_pdu_type;
+	cfg->supported_versions_mask = v0->supported_versions_mask;
+	cfg->num_rfci = v0->num_rfci;
+	cfg->num_subflows = v0->num_subflows;
+	cfg->IPTIs_present = v0->IPTIs_present;
 	OSMO_ASSERT(cfg->num_rfci <= ARRAY_SIZE(cfg->rfci));
 	OSMO_ASSERT(cfg->num_subflows <= ARRAY_SIZE(cfg->rfci[0].subflow_sizes));
 	for (i = 0; i < cfg->num_rfci; i++) {
 		cfg->rfci[i].used = true;
-		cfg->rfci[i].id = i; /* Assume RFC ID from position, llsk_audio doesn't provide info */
+		/* llsk_audio v0 doesn't provide info, assume RFC ID from position: */
+		cfg->rfci[i].id = (hnb->llsk.sapi_version_audio > 0) ? ce_req->v1.rfci[i] : i;
 		if (cfg->IPTIs_present)
-			cfg->rfci[i].IPTI = ce_req->IPTIs[i];
+			cfg->rfci[i].IPTI = v0->IPTIs[i];
 		if (cfg->num_subflows > 0)
-			memcpy(&cfg->rfci[i].subflow_sizes[0], &ce_req->subflow_sizes[i][0], cfg->num_subflows*sizeof(uint16_t));
+			memcpy(&cfg->rfci[i].subflow_sizes[0], &v0->subflow_sizes[i][0], cfg->num_subflows*sizeof(uint16_t));
 	}
 
 	cfg->t_init = (struct osmo_iuup_rnl_config_timer){ .t_ms = IUUP_TIMER_INIT_T_DEFAULT, .n_max = IUUP_TIMER_INIT_N_DEFAULT };
