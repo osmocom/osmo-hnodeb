@@ -38,7 +38,7 @@ int ll_addr_type2af(enum u_addr_type t)
 	case HNB_PRIM_ADDR_TYPE_IPV6:
 		return AF_INET6;
 	default:
-		LOGP(DLLSK, LOGL_ERROR, "Rx Unknwon address type %u\n", (unsigned)t);
+		LOGP(DLLSK, LOGL_ERROR, "Rx unknown address type %u\n", (unsigned)t);
 		return -1;
 	}
 }
@@ -169,7 +169,7 @@ static int llsk_rx_cb(struct osmo_prim_srv *srv, struct osmo_prim_hdr *oph)
 	case HNB_PRIM_SAPI_AUDIO:
 		return llsk_rx_audio(hnb, oph);
 	default:
-		LOGP(DLLSK, LOGL_ERROR, "Rx for unknwon SAPI %u (len=%u)\n",
+		LOGP(DLLSK, LOGL_ERROR, "Rx msg for unknown SAPI %u (len=%u)\n",
 		     oph->sap, msgb_length(oph->msg));
 		return -EINVAL;
 	}
