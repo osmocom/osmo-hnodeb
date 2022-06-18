@@ -22,9 +22,9 @@ GIT Repository
 
 You can clone from the official osmo-hnodeb.git repository using
 
-	git clone git://git.osmocom.org/osmo-hnodeb.git
+	git clone https://gitea.osmocom.org/cellular-infrastructure/osmo-hnodeb
 
-There is a cgit interface at https://git.osmocom.org/osmo-hnodeb/
+There is a web interface at <https://gitea.osmocom.org/cellular-infrastructure/osmo-hnodeb>
 
 Documentation
 -------------

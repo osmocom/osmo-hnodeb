@@ -23,8 +23,8 @@ Build-Depends: debhelper (>=9),
                libosmo-rua-dev (>= 0.8.0),
                osmo-gsm-manuals-dev (>= 1.2.0)
 Standards-Version: 3.9.8
-Vcs-Git: git://git.osmocom.org/osmo-hnodeb.git
-Vcs-Browser: https://git.osmocom.org/osmo-hnodeb/
+Vcs-Git: https://gitea.osmocom.org/cellular-infrastructure/osmo-hnodeb
+Vcs-Browser: https://gitea.osmocom.org/cellular-infrastructure/osmo-hnodeb
 Homepage: https://projects.osmocom.org/projects/osmo-hnodeb
 
 Package: osmo-hnodeb
