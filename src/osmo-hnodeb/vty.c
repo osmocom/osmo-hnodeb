@@ -192,8 +192,8 @@ DEFUN_USRATTR(cfg_hnodeb_rac,
 DEFUN_USRATTR(cfg_hnodeb_sac,
 	      cfg_hnodeb_sac_cmd,
 	      0,
-	      "service_area_code <0-255>",
-	      "Set the Service Area Code (RAC) of this HnodeB\n" "SAC\n")
+	      "service_area_code <0-65535>",
+	      "Set the Service Area Code (SAC) of this HnodeB\n" "SAC\n")
 {
 	struct hnb *hnb = (struct hnb *)vty->index;
 	hnb->sac = atoi(argv[0]);
