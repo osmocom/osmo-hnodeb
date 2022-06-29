@@ -1,3 +1,43 @@
+osmo-hnodeb (0.1.0) unstable; urgency=medium
+
+  [ Pau Espin Pedrol ]
+  * Move Iuh code to its own module
+  * Introduce SCTP log category
+  * iuh: Improve logging of SCTP notifications
+  * Fix typos and non-related test content
+  * Implement initial shutdown + reconnect FSM
+  * hnbap: Improve rx path and implement HnbRegisterReject
+  * Drop NAS and RANAP code and VTY commands
+  * Initial implementation of LowerLayer UD Socket
+  * First implementation of the LLSK audio SAPI
+  * First implementation of the LLSK gtp SAPI
+  * Fix several Coverity found issues
+  * Update AUDIO and GTP SAPs to support multiple conns per UE
+  * rtp: Use dynamic Payload Type 96
+  * llsk_gtp: Early return if conn alloc fails
+  * llsk_audio: Fix false positive about uninitialized var access
+  * contrib/osmo-hnodeb.spec.in: Fix missing dep libosmotrau
+  * gtp: Fix possible null pointer dereference
+  * Add example default config file
+  * Add initial support for IuUP RTP based Transport Layer
+  * Get rid of libgtp for GTP-U
+  * gtp: Fix uninitialized var if no extension flags set in gtp header
+  * Do not turn some compiler warnings into errors by default
+  * rtp: Update code to libosmogsm IuUP API changes
+  * llsk: Fix typo in log message
+  * hnb: move llsk fields inside substruct
+  * llsk: Validate received SAPI versions at startup
+  * audio: Introduce SAPI v1 with unordered RFCI support
+  * llsk: Fix previous audio sapi version passed instead of current
+
+  [ Harald Welte ]
+  * update git URLs (git -> https; gitea)
+
+  [ Michael Iedema ]
+  * typo: SAC needs 16bit range, not 8bit as copied from RAC entry
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Wed, 29 Jun 2022 12:37:29 +0200
+
 osmo-hnodeb (0.0.1) unstable; urgency=medium
 
   [ Pau Espin Pedrol ]
