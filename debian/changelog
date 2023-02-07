@@ -1,3 +1,16 @@
+osmo-hnodeb (0.1.1) unstable; urgency=medium
+
+  [ Vadim Yanitskiy ]
+  * configure.ac: do not require unused dlopen
+
+  [ Max ]
+  * Set working directory in systemd service file
+
+  [ Oliver Smith ]
+  * contrib/jenkins.sh: use --enable-werror
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Tue, 07 Feb 2023 18:03:48 +0100
+
 osmo-hnodeb (0.1.0) unstable; urgency=medium
 
   [ Pau Espin Pedrol ]
