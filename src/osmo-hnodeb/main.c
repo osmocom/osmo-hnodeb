@@ -268,7 +268,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	rc = telnet_init_dynif(tall_hnb_ctx, g_hnb, vty_get_bind_addr(), OSMO_VTY_PORT_HNODEB);
+	rc = telnet_init_default(tall_hnb_ctx, g_hnb, OSMO_VTY_PORT_HNODEB);
 	if (rc < 0) {
 		perror("Error binding VTY port");
 		exit(1);
