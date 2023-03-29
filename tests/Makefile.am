@@ -52,7 +52,7 @@ VTY_TEST ?= *.vty
 # To update the VTY script from current application behavior,
 # pass -u to vty_script_runner.py by doing:
 #   make vty-test U=-u
-vty-test:
+vty-test: $(top_builddir)/src/osmo-hnodeb/osmo-hnodeb
 	osmo_verify_transcript_vty.py -v \
 		-n OsmoHNodeB -p 4273 \
 		-r "$(top_builddir)/src/osmo-hnodeb/osmo-hnodeb -c $(top_srcdir)/doc/examples/osmo-hnodeb/osmo-hnodeb.cfg" \
