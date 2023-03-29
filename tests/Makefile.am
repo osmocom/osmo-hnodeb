@@ -34,12 +34,11 @@ DISTCLEANFILES = \
 	$(NULL)
 
 if ENABLE_EXT_TESTS
-python-tests:
-	echo ""
-#	TODO: Enable once we have a VTY/CTRL interface:
-#	$(MAKE) vty-test
-#	osmotestvty.py -p $(abs_top_srcdir) -w $(abs_top_builddir) -v
-#	osmotestconfig.py -p $(abs_top_srcdir) -w $(abs_top_builddir) -v
+python-tests: $(top_builddir)/src/osmo-hnodeb/osmo-hnodeb
+	$(MAKE) vty-test
+	osmotestvty.py -p $(abs_top_srcdir) -w $(abs_top_builddir) -v
+	osmotestconfig.py -p $(abs_top_srcdir) -w $(abs_top_builddir) -v
+# TODO: CTRL interface is not implemented
 #	$(srcdir)/ctrl_test_runner.py -w $(abs_top_builddir) -v
 else
 python-tests:
