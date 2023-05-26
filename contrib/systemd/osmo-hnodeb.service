@@ -1,5 +1,7 @@
 [Unit]
 Description=Osmocom Home NodeB (hNodeB)
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
