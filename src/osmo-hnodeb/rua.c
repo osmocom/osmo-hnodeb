@@ -115,6 +115,11 @@ static void hnb_rua_cl_handle(struct hnb *hnb, ANY_t *in)
 	ranap_buf_len = ies.ranaP_Message.size;
 
 	LOGP(DRUA, LOGL_DEBUG, "Rx RUA UDT ranap_len=%zu\n", ranap_buf_len);
+	if (!hnb->llsk.srv) {
+		LOGP(DRUA, LOGL_NOTICE, "Discarding rx RUA UDT ranap_len=%zu due to lower layers not available\n",
+		     ranap_buf_len);
+		goto free_ret;
+	}
 
 	LOGP(DLLSK, LOGL_DEBUG, "Tx IUH-UNITDATA.ind ranap_len=%zu\n", ranap_buf_len);
 	iuh_prim = hnb_iuh_makeprim_unitdata_ind(ranap_buf, ranap_buf_len);
