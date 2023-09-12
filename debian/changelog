@@ -1,3 +1,23 @@
+osmo-hnodeb (0.1.2) unstable; urgency=medium
+
+  [ arehbein ]
+  * Transition to use of 'telnet_init_default'
+
+  [ Vadim Yanitskiy ]
+  * build: remove $(COVERAGE_LDFLAGS) from osmo_hnodeb_LDADD
+  * tests: make 'vty-test' target depend on the respective binary
+  * tests: do not depend on undefined $(BUILT_SOURCES)
+  * copyright: fix typo: sysmocom s/s.m.f.c./s.f.m.c./ GmbH
+
+  [ Oliver Smith ]
+  * debian: set compat level to 10
+  * systemd: depend on networking-online.target
+
+  [ Pau Espin Pedrol ]
+  * rua: Fix null ptr access in hnb->llsk.srv
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Tue, 12 Sep 2023 17:22:10 +0200
+
 osmo-hnodeb (0.1.1) unstable; urgency=medium
 
   [ Vadim Yanitskiy ]
