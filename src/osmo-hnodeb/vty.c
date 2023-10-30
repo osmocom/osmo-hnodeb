@@ -343,7 +343,10 @@ static int config_write_hnodeb(struct vty *vty)
 
 
 DEFUN(asn_dbg, asn_dbg_cmd,
-	"asn-debug (1|0)", "Enable or disable libasn1c debugging")
+      "asn-debug (1|0)",
+      "Enable or disable libasn1c debugging\n"
+      "Enable libasn1c debugging\n"
+      "Disable libasn1c debugging\n")
 {
 	asn_debug = atoi(argv[0]);
 
