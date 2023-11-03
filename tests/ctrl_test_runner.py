@@ -154,7 +154,7 @@ class TestCtrlHNB(TestCtrlBase):
                 "doc/examples/osmo-hnodeb/osmo-hnodeb.cfg"]
 
     def ctrl_app(self):
-        return (4249, "./src/osmo-hnodeb/osmo-hnodeb", "OsmoHNodeB", "hnb")
+        return (4274, "./src/osmo-hnodeb/osmo-hnodeb", "OsmoHNodeB", "hnb")
 
     def testCtrlErrs(self):
         r = self.do_get('invalid')
