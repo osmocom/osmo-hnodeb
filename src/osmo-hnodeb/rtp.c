@@ -263,14 +263,13 @@ static void rtp_rx_cb(struct osmo_rtp_socket *rs, const uint8_t *rtp_pl,
 		      "Failed passing rx rtp up to IuUP layer: %d\n", rc);
 }
 
-int rtp_conn_setup(struct rtp_conn *conn, const struct osmo_sockaddr *rem_addr,
+int rtp_conn_setup(struct rtp_conn *conn, const char *local_ipstr, const struct osmo_sockaddr *rem_addr,
 		   const struct hnb_audio_conn_establish_req_param *ce_req)
 {
 	int rc;
 	char cname[256+4];
 	char name[32];
 	struct osmo_rtp_socket *rs;
-	const char *local_wildcard_ipstr = "0.0.0.0";
 	char remote_ipstr[INET6_ADDRSTRLEN];
 	uint16_t remote_port;
 	struct osmo_iuup_rnl_prim *irp;
@@ -305,15 +304,16 @@ int rtp_conn_setup(struct rtp_conn *conn, const struct osmo_sockaddr *rem_addr,
 	rs->priv = conn;
 	rs->rx_cb = &rtp_rx_cb;
 
-	rc = rtp_bind(hnb, rs, local_wildcard_ipstr);
+	rc = rtp_bind(hnb, rs, local_ipstr);
 	if (rc < 0) {
 		LOGUE(ue, DRTP, LOGL_ERROR, "Failed to bind RTP/RTCP sockets\n");
 		goto free_ret;
 	}
 	conn->id = rc; /* We use local port as rtp conn ID */
+	osmo_sockaddr_from_str_and_uint(&conn->loc_addr, local_ipstr, rc);
 
 	/* Ensure RTCP SDES contains some useful information */
-	snprintf(cname, sizeof(cname), "hnb@%s", local_wildcard_ipstr);
+	snprintf(cname, sizeof(cname), "hnb@%s", local_ipstr);
 	snprintf(name, sizeof(name), "ue@%u-%u", conn->ue->conn_id, conn->id);
 	osmo_rtp_set_source_desc(rs, cname, name, NULL, NULL, NULL,
 				 "OsmoHNodeB-" PACKAGE_VERSION, NULL);
@@ -324,12 +324,14 @@ int rtp_conn_setup(struct rtp_conn *conn, const struct osmo_sockaddr *rem_addr,
 		goto free_ret;
 	}
 
-	/* osmo_rtp_socket_connect() is broken, OS#5356 */
-	//rc = rtp_get_bound_addr(rs, &conn->loc_addr);
-	rc = rtp_get_bound_addr(rs, rem_addr, &conn->loc_addr);
-	if (rc < 0) {
-		LOGUE(ue, DRTP, LOGL_ERROR, "Cannot obtain locally bound IP/port: %d\n", rc);
-		goto free_ret;
+	if (osmo_sockaddr_is_any(&conn->loc_addr)) {
+		/* osmo_rtp_socket_connect() is broken, OS#5356 */
+		//rc = rtp_get_bound_addr(rs, &conn->loc_addr);
+		rc = rtp_get_bound_addr(rs, rem_addr, &conn->loc_addr);
+		if (rc < 0) {
+			LOGUE(ue, DRTP, LOGL_ERROR, "Cannot obtain locally bound IP/port: %d\n", rc);
+			goto free_ret;
+		}
 	}
 
 	/* Now configure the IuUP layer: */

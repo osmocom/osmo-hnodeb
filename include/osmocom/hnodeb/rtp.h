@@ -40,5 +40,6 @@ struct rtp_conn {
 struct rtp_conn *rtp_conn_alloc(struct hnb_ue *ue);
 void rtp_conn_free(struct rtp_conn *conn);
 
-int rtp_conn_setup(struct rtp_conn *conn, const struct osmo_sockaddr *rem_addr, const struct hnb_audio_conn_establish_req_param *ce_req);
+int rtp_conn_setup(struct rtp_conn *conn, const char *local_ipstr, const struct osmo_sockaddr *rem_addr,
+		   const struct hnb_audio_conn_establish_req_param *ce_req);
 int rtp_conn_tx_data(struct rtp_conn *conn, uint8_t frame_nr, uint8_t fqc, uint8_t rfci, const uint8_t *data, unsigned int data_len);

@@ -210,7 +210,7 @@ static int llsk_rx_audio_conn_establish_req(struct hnb *hnb, struct hnb_audio_co
 
 	/* Create the socket: */
 	conn = rtp_conn_alloc(ue);
-	if ((rc = rtp_conn_setup(conn, &rem_osa, ce_req)) < 0) {
+	if ((rc = rtp_conn_setup(conn, hnb->iuh.local_addr, &rem_osa, ce_req)) < 0) {
 		LOGUE(ue, DLLSK, LOGL_ERROR, "Rx AUDIO-CONN_ESTABLISH.req: Failed to set up audio socket rem_addr=%s\n",
 		      rem_addrstr);
 		return _send_conn_establish_cnf_failed(hnb, v0->context_id, 4);
