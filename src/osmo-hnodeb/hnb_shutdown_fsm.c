@@ -47,7 +47,7 @@ static void st_none(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 	struct hnb *hnb = (struct hnb *)fi->priv;
 	switch (event) {
 	case HNB_SHUTDOWN_EV_START:
-		/* TODO: here we may want to communicate t lower layers over UDsocket that we are shutting down...
+		/* TODO: here we may want to communicate to lower layers over UDsocket that we are shutting down...
 		 * TODO: Also, if Iuh link is still up, maybe send a Hnb deregister req towards HNBGW
 		 * TODO: also signal the hnb object somehow that we are starting to shut down?
 		 */
