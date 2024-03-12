@@ -44,25 +44,33 @@ static void st_none_on_enter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 
 static void st_none(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
+	switch (event) {
+	case HNB_SHUTDOWN_EV_START:
+		hnb_shutdown_fsm_state_chg(fi, HNB_SHUTDOWN_ST_IN_PROGRESS);
+		break;
+	}
+}
+
+static void st_in_progress_on_enter(struct osmo_fsm_inst *fi, uint32_t prev_state)
+{
 	struct hnb *hnb = (struct hnb *)fi->priv;
 	struct hnb_ue *ue, *ue_tmp;
 
-	switch (event) {
-	case HNB_SHUTDOWN_EV_START:
-		/* TODO: here we may want to communicate to lower layers over UDsocket that we are shutting down...
-		 * TODO: Also, if Iuh link is still up, maybe send a Hnb deregister req towards HNBGW
-		 */
+	/* TODO: Also, if Iuh link is still up, maybe send a Hnb deregister req towards HNBGW */
 
-		/* Drop active UE contexts, together with their GTP/AUDIO sessions: */
-		llist_for_each_entry_safe(ue, ue_tmp, &hnb->ue_list, list)
-			hnb_ue_free(ue);
+	/* Drop active UE contexts, together with their GTP/AUDIO sessions: */
+	llist_for_each_entry_safe(ue, ue_tmp, &hnb->ue_list, list)
+		hnb_ue_free(ue);
 
-		if (osmo_stream_cli_is_connected(hnb->iuh.client))
-			osmo_stream_cli_close(hnb->iuh.client);
+	if (osmo_stream_cli_is_connected(hnb->iuh.client))
+		osmo_stream_cli_close(hnb->iuh.client);
 
-		hnb_shutdown_fsm_state_chg(fi, HNB_SHUTDOWN_ST_EXIT);
-		break;
-	}
+	/* Close LLSK to notify lower layers that we are shutting down
+	 * even if we are not exiting the process. */
+	if (hnb_llsk_connected(hnb))
+		hnb_llsk_close_conn(hnb);
+
+	hnb_shutdown_fsm_state_chg(fi, HNB_SHUTDOWN_ST_EXIT);
 }
 
 static void st_exit_on_enter(struct osmo_fsm_inst *fi, uint32_t prev_state)
@@ -82,10 +90,16 @@ static struct osmo_fsm_state hnb_shutdown_fsm_states[] = {
 		.in_event_mask =
 			X(HNB_SHUTDOWN_EV_START),
 		.out_state_mask =
-			X(HNB_SHUTDOWN_ST_EXIT),
+			X(HNB_SHUTDOWN_ST_IN_PROGRESS),
 		.name = "NONE",
 		.onenter = st_none_on_enter,
 		.action = st_none,
+	},
+	[HNB_SHUTDOWN_ST_IN_PROGRESS] = {
+		.out_state_mask =
+			X(HNB_SHUTDOWN_ST_EXIT),
+		.name = "IN_PROGRESS",
+		.onenter = st_in_progress_on_enter,
 	},
 	[HNB_SHUTDOWN_ST_EXIT] = {
 		.name = "EXIT",

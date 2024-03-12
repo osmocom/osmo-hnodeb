@@ -113,7 +113,12 @@ static int llsk_closed_cb(struct osmo_prim_srv *srv)
 	hnb->llsk.srv = NULL;
 	hnb->llsk.valid_sapi_mask = 0x0;
 	osmo_timer_del(&hnb->llsk.defer_configure_ind_timer);
-	hnb_shutdown(hnb, "LLSK conn dropped", false);
+
+	/* We actively close the llsk conn during hnb_shutdown, no need to
+	* re-enter shutdown procedure thin that case: */
+	if (!hnb_shutdown_in_progress(hnb))
+		hnb_shutdown(hnb, "LLSK conn dropped", false);
+
 	return 0;
 }
 
@@ -134,6 +139,14 @@ bool hnb_llsk_can_be_configured(struct hnb *hnb)
 	    hnb->llsk.valid_sapi_mask & (1 << HNB_PRIM_SAPI_GTP))
 		return true;
 	return false;
+}
+
+void hnb_llsk_close_conn(const struct hnb *hnb)
+{
+	if (!hnb_llsk_connected(hnb))
+		return;
+	osmo_prim_srv_close(hnb->llsk.srv);
+	/* pointer NULLed in llsk_closed_cb() */
 }
 
 static void llsk_defer_configure_ind_timer_cb(void *data)

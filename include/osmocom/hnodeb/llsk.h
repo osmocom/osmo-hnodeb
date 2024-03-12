@@ -34,6 +34,7 @@ void hnb_llsk_free(struct hnb *hnb);
 int hnb_llsk_start_listen(struct hnb *hnb);
 bool hnb_llsk_connected(const struct hnb *hnb);
 bool hnb_llsk_can_be_configured(struct hnb *hnb);
+void hnb_llsk_close_conn(const struct hnb *hnb);
 
 int ll_addr_type2af(enum u_addr_type t);
 int ll_addr2osa(enum u_addr_type t, const union u_addr *uaddr, uint16_t port, struct osmo_sockaddr *osa);

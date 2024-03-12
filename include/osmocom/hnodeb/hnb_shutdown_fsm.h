@@ -28,6 +28,7 @@
 
 enum hnb_shutdown_fsm_states {
 	HNB_SHUTDOWN_ST_NONE,
+	HNB_SHUTDOWN_ST_IN_PROGRESS,
 	HNB_SHUTDOWN_ST_EXIT,
 };
 
