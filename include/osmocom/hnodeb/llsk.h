@@ -30,6 +30,8 @@ struct hnb;
 struct rtp_conn;
 
 int hnb_llsk_alloc(struct hnb *hnb);
+void hnb_llsk_free(struct hnb *hnb);
+int hnb_llsk_start_listen(struct hnb *hnb);
 bool hnb_llsk_connected(const struct hnb *hnb);
 bool hnb_llsk_can_be_configured(struct hnb *hnb);
 

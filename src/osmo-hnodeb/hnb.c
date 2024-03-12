@@ -88,9 +88,7 @@ void hnb_free(struct hnb *hnb)
 	}
 	hnb_iuh_free(hnb);
 
-	osmo_timer_del(&hnb->llsk.defer_configure_ind_timer);
-	osmo_prim_srv_link_free(hnb->llsk.link);
-	hnb->llsk.link = NULL;
+	hnb_llsk_free(hnb);
 
 	hnb_gtp_unbind(hnb);
 

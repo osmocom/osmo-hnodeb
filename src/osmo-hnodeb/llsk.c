@@ -219,3 +219,15 @@ int hnb_llsk_alloc(struct hnb *hnb)
 	osmo_timer_setup(&hnb->llsk.defer_configure_ind_timer, llsk_defer_configure_ind_timer_cb, hnb);
 	return 0;
 }
+
+void hnb_llsk_free(struct hnb *hnb)
+{
+	osmo_timer_del(&hnb->llsk.defer_configure_ind_timer);
+	osmo_prim_srv_link_free(hnb->llsk.link);
+	hnb->llsk.link = NULL;
+}
+
+int hnb_llsk_start_listen(struct hnb *hnb)
+{
+	return osmo_prim_srv_link_open(g_hnb->llsk.link);
+}
