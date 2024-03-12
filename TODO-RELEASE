@@ -8,3 +8,4 @@
 # If any interfaces have been removed or changed since the last public release: c:r:0.
 #library	what		description / commit summary line
 libosmocore	depend >= 1.9.0		we need osmo_sockaddr_from_str_and_uint()
+libosmo-netif depend > 1.4.0 osmo_prim_srv{_link}_set_name()

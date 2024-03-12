@@ -85,6 +85,7 @@ enum u_addr_type osa2_ll_addr(const struct osmo_sockaddr *osa, union u_addr *uad
 static int llsk_opened_cb(struct osmo_prim_srv *srv)
 {
 	struct hnb *hnb = (struct hnb *)osmo_prim_srv_get_priv(srv);
+	osmo_prim_srv_set_name(srv, "llsk");
 
 	if (hnb->llsk.srv) {
 		LOGP(DLLSK, LOGL_ERROR, "New connection opened while one is already active, dropping it\n");
@@ -208,6 +209,7 @@ int hnb_llsk_alloc(struct hnb *hnb)
 {
 	hnb->llsk.link = osmo_prim_srv_link_alloc(hnb);
 	osmo_prim_srv_link_set_priv(hnb->llsk.link, hnb);
+	osmo_prim_srv_link_set_name(hnb->llsk.link, "llsk-link");
 	osmo_prim_srv_link_set_log_category(hnb->llsk.link, DLLSK);
 	osmo_prim_srv_link_set_addr(hnb->llsk.link, HNB_PRIM_UD_SOCK_DEFAULT);
 	osmo_prim_srv_link_set_opened_conn_cb(hnb->llsk.link, llsk_opened_cb);
