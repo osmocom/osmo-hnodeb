@@ -45,12 +45,18 @@ static void st_none_on_enter(struct osmo_fsm_inst *fi, uint32_t prev_state)
 static void st_none(struct osmo_fsm_inst *fi, uint32_t event, void *data)
 {
 	struct hnb *hnb = (struct hnb *)fi->priv;
+	struct hnb_ue *ue, *ue_tmp;
+
 	switch (event) {
 	case HNB_SHUTDOWN_EV_START:
 		/* TODO: here we may want to communicate to lower layers over UDsocket that we are shutting down...
 		 * TODO: Also, if Iuh link is still up, maybe send a Hnb deregister req towards HNBGW
-		 * TODO: also signal the hnb object somehow that we are starting to shut down?
 		 */
+
+		/* Drop active UE contexts, together with their GTP/AUDIO sessions: */
+		llist_for_each_entry_safe(ue, ue_tmp, &hnb->ue_list, list)
+			hnb_ue_free(ue);
+
 		if (osmo_stream_cli_is_connected(hnb->iuh.client))
 			osmo_stream_cli_close(hnb->iuh.client);
 
