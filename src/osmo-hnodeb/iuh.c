@@ -180,6 +180,7 @@ void hnb_iuh_alloc(struct hnb *hnb)
 	cli = osmo_stream_cli_create(hnb);
 	OSMO_ASSERT(cli);
 	hnb->iuh.client = cli;
+	osmo_stream_cli_set_name(cli, "Iuh");
 	osmo_stream_cli_set_nodelay(cli, true);
 	osmo_stream_cli_set_proto(cli, IPPROTO_SCTP);
 	osmo_stream_cli_set_reconnect_timeout(cli, 5);
