@@ -30,7 +30,7 @@ Homepage: https://projects.osmocom.org/projects/osmo-hnodeb
 Package: osmo-hnodeb
 Architecture: any
 Multi-Arch: foreign
-Depends: ${misc:Depends}, ${shlibs:Depends}, adduser
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Recommends: osmo-mgw
 Description: OsmoHNodeB: Osmocom's Home NodeB for 3G mobile networks
 
