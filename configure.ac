@@ -226,5 +226,4 @@ AC_OUTPUT(
     doc/manuals/Makefile
     contrib/Makefile
     contrib/systemd/Makefile
-    contrib/osmo-hnodeb.spec
     Makefile)
