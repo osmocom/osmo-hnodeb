@@ -1,3 +1,34 @@
+osmo-hnodeb (0.2.0) unstable; urgency=medium
+
+  [ Vadim Yanitskiy ]
+  * vty: fix incomplete docs for 'asn-debug' command
+  * tests/ctrl_test_runner.py: fix wrong CTRL port
+  * tests: enable commented-out 'python-tests' target
+
+  [ Harald Welte ]
+  * Use 'iuh/local-ip' as local IP for RTP sockets
+
+  [ Andreas Eversberg ]
+  * Use uniform log format for default config files
+
+  [ Pau Espin Pedrol ]
+  * iuh: Name stream_cli connection
+  * Name llsk prim_srv{_link}
+  * cosmetic: Fix typo in comment
+  * llsk: Add APIs to interact with llsk->link
+  * Free UE contexts when starting shutdown procedure
+  * Close LLSK during shutdown procedure
+
+  [ Max ]
+  * .deb/.rpm: add osmocom user during package install
+
+  [ Oliver Smith ]
+  * .deb/.rpm: various fixes related to non-root
+  * contrib: remove rpm spec file
+  * debian/postinst: add checks, be verbose
+
+ -- Oliver Smith <osmith@sysmocom.de>  Thu, 25 Jul 2024 10:29:29 +0200
+
 osmo-hnodeb (0.1.2) unstable; urgency=medium
 
   [ arehbein ]
