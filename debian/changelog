@@ -1,3 +1,15 @@
+osmo-hnodeb (0.2.1) unstable; urgency=medium
+
+  [ Oliver Smith ]
+  * contrib/jenkins: libosmo-sccp -> libosmo-sigtran
+
+  [ Pau Espin Pedrol ]
+  * jenkins.sh: libosmo-netif no longer depends on libosmo-abis
+  * Avoid linking libosmoabis.so
+  * jenkins.sh: No need to build libosmo-sigtran with doxygen
+
+ -- Oliver Smith <osmith@sysmocom.de>  Wed, 12 Feb 2025 14:41:11 +0100
+
 osmo-hnodeb (0.2.0) unstable; urgency=medium
 
   [ Vadim Yanitskiy ]
