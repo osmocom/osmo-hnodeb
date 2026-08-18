@@ -120,6 +120,10 @@ struct rtp_conn *rtp_conn_alloc(struct hnb_ue *ue)
 
 	snprintf(iuup_id, sizeof(iuup_id), "ue-%u", conn->ue->conn_id);
 	conn->iui = osmo_iuup_instance_alloc(conn, iuup_id);
+	if (!conn->iui) {
+		talloc_free(conn);
+		return NULL;
+	}
 	osmo_iuup_instance_set_user_prim_cb(conn->iui, _iuup_user_prim_cb, conn);
 	osmo_iuup_instance_set_transport_prim_cb(conn->iui, _iuup_transport_prim_cb, conn);
 
