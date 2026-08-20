@@ -1,3 +1,9 @@
+osmo-hnodeb (0.2.2) unstable; urgency=medium
+
+  * rtp: fail if IuUP instance is not created
+
+ -- Pau Espin Pedrol <pespin@sysmocom.de>  Thu, 20 Aug 2026 14:01:27 +0200
+
 osmo-hnodeb (0.2.1) unstable; urgency=medium
 
   [ Oliver Smith ]
